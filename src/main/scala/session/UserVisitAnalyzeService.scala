@@ -109,53 +109,14 @@ object UserVisitAnalyzeService {
           return
       }
 
-      val sql = s"select click_product_id,order_product_ids,pay_product_ids from ${Constants.TABLE_USER_VISIT_ACTION} natural join ${Constants.TABLE_USER_INFO} WHERE date >= '${userInput.getStartDate.getTime}' AND date<= '${userInput.getEndDate.getTime}' " + limit
-      val rdd = sqlContext.sql(sql).rdd
+      val sql = s"with t as (select * from ${Constants.TABLE_USER_VISIT_ACTION} natural join ${Constants.TABLE_USER_INFO} " +
+        s"WHERE date >= '${userInput.getStartDate.getTime}' AND date<= '${userInput.getEndDate.getTime}' " + limit +"), " +
+        "click as (select click_product_id ,count(*) as c_1 from t group by click_product_id), " +
+        "ord as (select order_product_ids ,count(*) as c_2 from t group by order_product_ids ), " +
+        "pay as (select pay_product_ids,count(*) as c_3 from t group by pay_product_ids ) " +
+        "select * from click natural join ord natural join pay "
+      val rdd = sqlContext.sql(sql).show()
 
-      val statHashTable = new mutable.HashMap[Long, ProductStat]()
-      rdd.foreach(row => {
-
-        try {
-          val click_id = row.getLong(0)
-          if (statHashTable.contains(click_id)) {
-            statHashTable(click_id).addClickTime()
-          } else {
-            statHashTable += (click_id -> new ProductStat().addClickTime())
-          }
-        } catch {
-          case e:NullPointerException =>
-        }
-
-        try {
-          val order_id = row.getLong(1)
-          if (statHashTable.contains(order_id)) {
-            statHashTable(order_id).addOrderTime()
-          } else {
-            statHashTable += (order_id -> new ProductStat().addOrderTime())
-          }
-        } catch {
-          case e:NullPointerException =>
-        }
-
-        try {
-          val pay_id = row.getLong(2)
-          if (statHashTable.contains(pay_id)) {
-            statHashTable(pay_id).addPayTime()
-          } else {
-            statHashTable += (pay_id -> new ProductStat().addPayTime())
-          }
-        } catch {
-          case e:NullPointerException =>
-        }
-
-
-      })
-
-      val lst = statHashTable.toList.sortBy(_._2)
-
-      println("fuck:")
-      lst.foreach(println)
-      println("--------------------")
 
     }
     // 释放资源

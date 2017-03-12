@@ -36,15 +36,22 @@ public class ProductStat implements Comparable<ProductStat> {
         return this;
     }
 
+    public ProductStat add(ProductStat o) {
+        this.clickTime += o.clickTime;
+        this.orderTime += o.orderTime;
+        this.payTime += o.payTime;
+        return this;
+    }
+
 
     @Override
     public int compareTo(ProductStat o) {
-        if(clickTime==o.clickTime){
-            if(orderTime == o.orderTime){
+        if (clickTime == o.clickTime) {
+            if (orderTime == o.orderTime) {
                 return (int) (payTime - o.payTime);
             }
-            return (int) (orderTime-o.orderTime);
+            return (int) (orderTime - o.orderTime);
         }
-        return (int) (clickTime-o.clickTime);
+        return (int) (clickTime - o.clickTime);
     }
 }
