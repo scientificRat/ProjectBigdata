@@ -5,8 +5,6 @@ package scalautils
   */
 
 import java.text.SimpleDateFormat
-import java.util.Date
-
 import conf.ConfigurationManager
 import constants.Constants
 import org.apache.spark.SparkContext
