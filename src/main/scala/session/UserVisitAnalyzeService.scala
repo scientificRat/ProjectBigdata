@@ -19,7 +19,7 @@ import scalautils.SparkUtils
 object UserVisitAnalyzeService {
   def main(args: Array[String]): Unit = {
     // 配置Spark
-    val sparkConf = new SparkConf().setAppName(Constants.SPARK_APP_NAME).setMaster("local[4]")
+    val sparkConf = new SparkConf().setAppName(Constants.SPARK_APP_NAME).setMaster("local[2]")
     // 负责和集群通信
     val sparkContext = new SparkContext(sparkConf)
     // spark sql是建立在sparkCores上面的，那么自然而然需要使用到sparkContext进行通信
@@ -61,10 +61,12 @@ object UserVisitAnalyzeService {
       }
 
       val sql = s"select * from ${Constants.TABLE_USER_VISIT_ACTION} natural join ${Constants.TABLE_USER_INFO} WHERE date >= '${userInput.getStartDate.getTime}' AND date<= '${userInput.getEndDate.getTime}' " + limit
-      val rdd = sqlContext.sql(sql).rdd.map(row => {
-        (row.get(2), formatToValue(row))
-      })
-      rdd.foreach(println)
+//      println(sql)
+      sqlContext.sql("select * from user_visit_action as a, user_info as b where a.user_id =b.user_id").show()
+//      val rdd = sqlContext.sql("select * from user_visit_action natural join user_info").rdd.map(row => {
+//        (row.get(2), formatToValue(row))
+//      })
+//      rdd.foreach(println)
 
     } else if (userInput.getTaskID == "3") {
       // 实现自定义累加器完成多个聚合统计业务的计算,统计业务包括访问时长：1~3秒，4~6秒，7~9秒，10~30秒，30~60秒的session访问量统计，访问步长：1~3个页面，4~6个页面等步长的访问统计
@@ -109,14 +111,23 @@ object UserVisitAnalyzeService {
           return
       }
 
-      val sql = s"with t as (select * from ${Constants.TABLE_USER_VISIT_ACTION} natural join ${Constants.TABLE_USER_INFO} " +
-        s"WHERE date >= '${userInput.getStartDate.getTime}' AND date<= '${userInput.getEndDate.getTime}' " + limit +"), " +
-        "click as (select click_product_id ,count(*) as c_1 from t group by click_product_id), " +
-        "ord as (select order_product_ids ,count(*) as c_2 from t group by order_product_ids ), " +
-        "pay as (select pay_product_ids,count(*) as c_3 from t group by pay_product_ids ) " +
-        "select * from click natural join ord natural join pay "
-      val rdd = sqlContext.sql(sql).show()
+      val sql = s"select click_product_id,order_product_ids,pay_product_ids from ${Constants.TABLE_USER_VISIT_ACTION} natural join ${Constants.TABLE_USER_INFO} " +
+        s"WHERE date >= '${userInput.getStartDate.getTime}' AND date<= '${userInput.getEndDate.getTime}' " + limit
+      val rdd = sqlContext.sql(s"select click_product_id,order_product_ids,pay_product_ids from ${Constants.TABLE_USER_VISIT_ACTION}").rdd.map(row => {
+        if (!row.isNullAt(0)) {
+          (row.getLong(0), new ProductStat(1, 0, 0))
+        } else if (!row.isNullAt(1)) {
+          (row.getLong(1), new ProductStat(0, 1, 0))
+        } else if (!row.isNullAt(2)) {
+          (row.getLong(2), new ProductStat(0, 0, 1))
+        } else {
+          (0, new ProductStat(0, 0, 0))
+        }
+      }).reduceByKey((a, b) => {
+        a.add(b)
+      }).sortBy(tp => tp._2, ascending = false)
 
+      rdd.foreach(println)
 
     }
     // 释放资源
@@ -170,10 +181,11 @@ object UserVisitAnalyzeService {
     val gson = new Gson()
     val inputJson01 = "{\"taskID\":\"1\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\"}"
     val inputJson02 = "{\"taskID\":\"2\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40,\"cities\":[\"city6\",\"city48\",\"city77\"]}"
-    val inputJson021 ="{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":20,\"endAge\":40,\"sex\":\"female\",\"searchWords\":[\"小米5\"],\"cities\":[\"city6\"]}";
+    val inputJson021 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":20,\"endAge\":40,\"sex\":\"female\",\"searchWords\":[\"小米5\"],\"cities\":[\"city6\"]}";
     val inputJson03 = "{\"taskID\":\"3\"}"
     val inputJson04 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40,\"cities\":[\"city6\"]}"
+    val inputJson044 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40}"
 
-    gson.fromJson(inputJson021, classOf[UserInput])
+    gson.fromJson(inputJson02, classOf[UserInput])
   }
 }
