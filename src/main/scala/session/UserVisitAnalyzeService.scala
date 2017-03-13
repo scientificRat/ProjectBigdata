@@ -180,13 +180,13 @@ object UserVisitAnalyzeService {
     private def getUserInput(dbConnection: Connection): UserInput = {
         //fixme: debug only
         val gson = new Gson()
-        val inputJson01 = "{\"taskID\":\"1\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\"}"
+        val inputJson01 = "{\"taskID\":\"1\",\"startDate\":\"2017-03-05\",\"endDate\":\"2017-04-06\"}"
         val inputJson02 = "{\"taskID\":\"2\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40,\"cities\":[\"city6\",\"city48\",\"city77\"]}"
         val inputJson021 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":20,\"endAge\":40,\"sex\":\"female\",\"searchWords\":[\"小米5\"],\"cities\":[\"city6\"]}";
         val inputJson03 = "{\"taskID\":\"3\"}"
         val inputJson04 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40,\"cities\":[\"city6\"]}"
         val inputJson044 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40}"
 
-        gson.fromJson(inputJson044, classOf[UserInput])
+        gson.fromJson(inputJson01, classOf[UserInput])
     }
 }
