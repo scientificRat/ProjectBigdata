@@ -46,7 +46,7 @@ object UserVisitAnalyzeService {
                 convertToFormattedRowOutput(rdd).foreach(println)
             }
             case "3" => {
-                // fixme: 这里需要封装和优化
+                // fixme: 因为前任智力有问题，这里需要封装和优化
                 // 实现自定义累加器完成多个聚合统计业务的计算,
                 // 统计业务包括访问时长：1~3秒，4~6秒，7~9秒，10~30秒，30~60秒的session访问量统计，
                 // 访问步长：1~3个页面，4~6个页面等步长的访问统计
@@ -92,8 +92,10 @@ object UserVisitAnalyzeService {
                 rdd.foreach(println)
             }
         }
+
         // 释放资源
         sparkContext.stop()
+        dbConnection.close()
     }
 
     // 将查询输出转化为标准化的形式
@@ -196,13 +198,16 @@ object UserVisitAnalyzeService {
     private def getUserInput(dbConnection: Connection): UserInput = {
         //fixme: debug only
         val gson = new Gson()
-        val inputJson01 = "{\"taskID\":\"1\",\"startDate\":\"2017-03-05\",\"endDate\":\"2017-04-06\"}"
-        val inputJson02 = "{\"taskID\":\"2\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40,\"cities\":[\"city6\",\"city48\",\"city77\"]}"
-        val inputJson021 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":20,\"endAge\":40,\"sex\":\"female\",\"searchWords\":[\"小米5\"],\"cities\":[\"city6\"]}";
-        val inputJson03 = "{\"taskID\":\"3\"}"
-        val inputJson04 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40,\"cities\":[\"city6\"]}"
-        val inputJson044 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40}"
+        val prestmt = dbConnection.prepareStatement("SELECT * FROM IDCproj ORDER BY ID LIMIT 1")
 
-        gson.fromJson(inputJson01, classOf[UserInput])
+//        val inputJson01 = "{\"taskID\":\"1\",\"startDate\":\"2017-03-05\",\"endDate\":\"2017-04-06\"}"
+//        val inputJson02 = "{\"taskID\":\"2\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40,\"cities\":[\"city6\",\"city48\",\"city77\"]}"
+//        val inputJson021 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":20,\"endAge\":40,\"sex\":\"female\",\"searchWords\":[\"小米5\"],\"cities\":[\"city6\"]}";
+//        val inputJson03 = "{\"taskID\":\"3\"}"
+//        val inputJson04 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40,\"cities\":[\"city6\"]}"
+//        val inputJson044 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40}"
+
+        val json = prestmt.executeQuery().getString("JSON")
+        gson.fromJson(json, classOf[UserInput])
     }
 }

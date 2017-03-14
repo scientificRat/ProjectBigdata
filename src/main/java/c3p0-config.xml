@@ -1,0 +1,48 @@
+<c3p0-config>
+    <default-config>
+        <property name="automaticTestTable">con_test</property>
+        <property name="checkoutTimeout">30000</property>
+        <property name="idleConnectionTestPeriod">30</property>
+        <property name="initialPoolSize">10</property>
+        <property name="maxIdleTime">30</property>
+        <property name="maxPoolSize">100</property>
+        <property name="minPoolSize">10</property>
+        <property name="maxStatements">200</property>
+
+        <user-overrides user="test-user">
+            <property name="maxPoolSize">10</property>
+            <property name="minPoolSize">1</property>
+            <property name="maxStatements">0</property>
+        </user-overrides>
+    </default-config>
+
+    <!-- 配置，名字建议stupidRat或者sexyHuangZhengyue -->
+    <named-config name="stupidRatProj">
+        <!-- 数据库连接不足时，一次增加的连接数 -->
+        <property name="acquireIncrement">50</property>
+        <!-- 初始连接数 -->
+        <property name="initialPoolSize">100</property>
+        <!-- 最小连接数 -->
+        <property name="minPoolSize">50</property>
+        <!-- 最大连接数 -->
+        <property name="maxPoolSize">1000</property>
+        <!-- 空闲连接维持时间（秒），超过这个时间的空闲连接会被关闭 -->
+        <property name="maxIdleTime">60</property>
+        <!-- 空闲连接检查时间（秒），连接池每隔这个时间会检查一次 -->
+        <property name="idleConnectionTestPeriod">30</property>
+
+        <!-- 暂时没搞懂，官方文档不建议修改 -->
+        <property name="maxStatements">0</property>
+        <property name="maxStatementsPerConnection">5</property>
+
+        <!-- 指定连接数据源的属性 -->
+        <!-- 用户名称 -->
+        <property name = "user">stupidrat</property>
+        <!-- 用户密码 -->
+        <property name = "password">stupidrat</property>
+        <!-- Driver类 -->
+        <property name = "driverClass">com.mysql.jdbc.Driver</property>
+        <!-- JDBC URL -->
+        <property name = "jdbcUrl">jdbc:mysql://115.28.20.93:3306/stupidrat</property>
+    </named-config>
+</c3p0-config>
