@@ -16,8 +16,13 @@ import scalautils.SparkUtils
   * Created by sky on 2017/3/11.
   */
 object UserVisitAnalyzeService {
-
     def main(args: Array[String]): Unit = {
+        //TA: 不要把所有逻辑写在main里
+        //TA: 傻逼，不是这意思
+        isNotMain(args)
+    }
+
+    def isNotMain(args: Array[String]): Unit = {
         // 配置Spark
         val sparkConf = new SparkConf().setAppName(Constants.SPARK_APP_NAME).setMaster("local[4]")
         // 负责和集群通信
@@ -28,14 +33,17 @@ object UserVisitAnalyzeService {
         // 获取输入
         val dbConnection = DBHelper.getDBConnection
         val userInput = getUserInput(dbConnection)
+        println(userInput.getTaskID)
+
         // 读取数据
         SparkUtils.loadLocalTestDataToTmpTable(sc = sparkContext, sqlContext = sqlContext)
         // 开始处理
         userInput.getTaskID match {
             case "1" => {
+//                sqlContext.sql(s"select * from ${Constants.TABLE_USER_VISIT_ACTION}").show()
                 // 在指定日期范围内，按照session粒度进行数据聚合
                 val rdd = aggregateSessionInDateRange(sqlContext, userInput)
-                // 输出
+//                // 输出
                 convertToFormattedRowOutput(rdd).foreach(println)
             }
             case "2" => {
@@ -109,13 +117,14 @@ object UserVisitAnalyzeService {
     def aggregateSessionInDateRange(sqlContext: SQLContext, userInput: UserInput): RDD[Row] = {
         // 检查输入合法性
         assert(userInput.getStartDate != null, "error,parameter startDate is required")
-        assert(userInput.getEndDate != null, "error,parameter ebdDate is required")
+        assert(userInput.getEndDate != null, "error,parameter endDate is required")
         // 查询
-        sqlContext.sql(s"select * from ${Constants.TABLE_USER_VISIT_ACTION} as t1, " +
+        val sql =s"select * from ${Constants.TABLE_USER_VISIT_ACTION} as t1, " +
             s"${Constants.TABLE_USER_INFO} as t2 " +
             s"WHERE t1.user_id = t2.user_id " +
-            s"AND date >= '${userInput.getStartDate.getTime}' AND date< '${userInput.getEndDate.getTime}'")
-            .rdd
+            s"AND date >= '${userInput.getStartDate.getTime}' AND date< '${userInput.getEndDate.getTime}'"
+        println(sql)
+        sqlContext.sql(sql).rdd
     }
 
     // 根据用户的查询条件 返回的结果RDD,
@@ -198,16 +207,20 @@ object UserVisitAnalyzeService {
     private def getUserInput(dbConnection: Connection): UserInput = {
         //fixme: debug only
         val gson = new Gson()
-        val prestmt = dbConnection.prepareStatement("SELECT * FROM IDCproj ORDER BY ID LIMIT 1")
+        val stmt = dbConnection.createStatement()
 
-//        val inputJson01 = "{\"taskID\":\"1\",\"startDate\":\"2017-03-05\",\"endDate\":\"2017-04-06\"}"
-//        val inputJson02 = "{\"taskID\":\"2\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40,\"cities\":[\"city6\",\"city48\",\"city77\"]}"
-//        val inputJson021 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":20,\"endAge\":40,\"sex\":\"female\",\"searchWords\":[\"小米5\"],\"cities\":[\"city6\"]}";
-//        val inputJson03 = "{\"taskID\":\"3\"}"
-//        val inputJson04 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40,\"cities\":[\"city6\"]}"
-//        val inputJson044 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40}"
+        //        val inputJson01 = "{\"taskID\":\"1\",\"startDate\":\"2017-03-05\",\"endDate\":\"2017-04-06\"}"
+        //        val inputJson02 = "{\"taskID\":\"2\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40,\"cities\":[\"city6\",\"city48\",\"city77\"]}"
+        //        val inputJson021 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":20,\"endAge\":40,\"sex\":\"female\",\"searchWords\":[\"小米5\"],\"cities\":[\"city6\"]}";
+        //        val inputJson03 = "{\"taskID\":\"3\"}"
+        //        val inputJson04 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40,\"cities\":[\"city6\"]}"
+        //        val inputJson044 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40}"
 
-        val json = prestmt.executeQuery().getString("JSON")
-        gson.fromJson(json, classOf[UserInput])
+        val res = stmt.executeQuery("SELECT * FROM IDCproj ORDER BY ID LIMIT 1")
+        val input = if (res.next()) gson.fromJson(res.getString("JSON"), classOf[UserInput])
+        else null
+
+        stmt.close()
+        input
     }
 }

@@ -19,13 +19,13 @@
     <!-- 配置，名字建议stupidRat或者sexyHuangZhengyue -->
     <named-config name="stupidRatProj">
         <!-- 数据库连接不足时，一次增加的连接数 -->
-        <property name="acquireIncrement">50</property>
+        <property name="acquireIncrement">2</property>
         <!-- 初始连接数 -->
-        <property name="initialPoolSize">100</property>
+        <property name="initialPoolSize">5</property>
         <!-- 最小连接数 -->
-        <property name="minPoolSize">50</property>
+        <property name="minPoolSize">5</property>
         <!-- 最大连接数 -->
-        <property name="maxPoolSize">1000</property>
+        <property name="maxPoolSize">100</property>
         <!-- 空闲连接维持时间（秒），超过这个时间的空闲连接会被关闭 -->
         <property name="maxIdleTime">60</property>
         <!-- 空闲连接检查时间（秒），连接池每隔这个时间会检查一次 -->
@@ -43,6 +43,6 @@
         <!-- Driver类 -->
         <property name = "driverClass">com.mysql.jdbc.Driver</property>
         <!-- JDBC URL -->
-        <property name = "jdbcUrl">jdbc:mysql://115.28.20.93:3306/stupidrat</property>
+        <property name = "jdbcUrl">jdbc:mysql://115.28.20.93:3306/stupidRat</property>
     </named-config>
 </c3p0-config>
