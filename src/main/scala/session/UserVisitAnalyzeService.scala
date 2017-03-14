@@ -126,6 +126,7 @@ object UserVisitAnalyzeService {
         val sql = s"select * from ${Constants.TABLE_USER_VISIT_ACTION} as t1, ${Constants.TABLE_USER_INFO} as t2 " +
             s"WHERE t1.user_id = t2.user_id " +
             s"AND date >= '${userInput.getStartDate.getTime}' AND date< '${userInput.getEndDate.getTime}' " + limit
+
         sqlContext.sql(sql).rdd
     }
 
@@ -139,6 +140,7 @@ object UserVisitAnalyzeService {
             s"from ${Constants.TABLE_USER_VISIT_ACTION} as t1, ${Constants.TABLE_USER_INFO} as t2 " +
             s"WHERE t1.user_id = t2.user_id " +
             s"AND date >= '${userInput.getStartDate.getTime}' AND date<= '${userInput.getEndDate.getTime}' " + limit
+
         sqlContext.sql(sql).rdd.map(row => {
             if (!row.isNullAt(0)) {
                 (row.getLong(0), new ProductStat(1, 0, 0))

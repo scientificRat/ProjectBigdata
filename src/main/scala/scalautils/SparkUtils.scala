@@ -43,7 +43,7 @@ object SparkUtils {
         )
 
         //从指定位置创建RDD
-        val session_path = ConfigurationManager.getProperty(Constants.LOCAL_SESSION_DATA_PATH)
+        val session_path = Constants.LOCAL_SESSION_DATA_PATH
         val sessionRDD = sc.textFile(session_path).map(_.split(" "))
         //将RDD映射成rowRDD
         //fixme
@@ -71,7 +71,7 @@ object SparkUtils {
             )
         )
         //从指定位置创建RDD
-        val user_path = ConfigurationManager.getProperty(Constants.LOCAL_USER_DATA_PATH)
+        val user_path = Constants.LOCAL_USER_DATA_PATH
         val userRDD = sc.textFile(user_path).map(_.split(" "))
         val userRowRdd = userRDD.map(u => Row(strToLong(u(0)), u(1), u(2), strToInt(u(3)), u(4), u(5), u(6)))
         val userDataFrame = sqlContext.createDataFrame(userRowRdd, userSchema)
@@ -88,7 +88,7 @@ object SparkUtils {
         )
 
         //从指定位置创建RDD
-        val product_path = ConfigurationManager.getProperty(Constants.LOCAL_PRODUCT_DATA_PATH)
+        val product_path = Constants.LOCAL_PRODUCT_DATA_PATH
         val productRDD = sc.textFile(product_path).map(_.split(" "))
         val productRowRdd = userRDD.map(u => Row(strToLong(u(0)), u(1), u(2)))
         val productDataFrame = sqlContext.createDataFrame(productRowRdd, productSchema)
