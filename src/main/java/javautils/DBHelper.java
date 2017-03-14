@@ -1,4 +1,4 @@
-package dao;
+package javautils;
 
 import java.sql.Connection;
 
@@ -7,8 +7,7 @@ import java.sql.Connection;
  */
 public class DBHelper {
 
-    public static Connection getConnection(){
-
+    public static Connection getDBConnection() {
         return null;
     }
 

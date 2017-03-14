@@ -1,10 +1,10 @@
 package session
 
 import java.sql.Connection
+import javautils.DBHelper
 
 import com.google.gson.Gson
 import constants.Constants
-import dao.DBHelper
 import domain.{ProductStat, UserInput}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SQLContext}
@@ -26,7 +26,7 @@ object UserVisitAnalyzeService {
         val sqlContext = new SQLContext(sparkContext)
 
         // 获取输入
-        val dbConnection = DBHelper.getConnection
+        val dbConnection = DBHelper.getDBConnection
         val userInput = getUserInput(dbConnection)
         // 读取数据
         SparkUtils.loadLocalTestDataToTmpTable(sc = sparkContext, sqlContext = sqlContext)
@@ -39,15 +39,21 @@ object UserVisitAnalyzeService {
                 convertToFormattedRowOutput(rdd).foreach(println)
             }
             case "2" => {
-                // 根据用户的查询条件 返回的结果RDD, 一个或者多个：年龄范围，职业（多选），城市（多选），搜索词（多选），点击品类（多选）进行数据过滤,session时间范围是必选的
+                // 根据用户的查询条件 返回的结果RDD,
+                // 一个或者多个：年龄范围，职业（多选），城市（多选），搜索词（多选），点击品类（多选）进行数据过滤,session时间范围是必选的
                 val rdd = filterRDD(sqlContext, userInput)
                 // 输出
                 convertToFormattedRowOutput(rdd).foreach(println)
             }
             case "3" => {
-                // 实现自定义累加器完成多个聚合统计业务的计算,统计业务包括访问时长：1~3秒，4~6秒，7~9秒，10~30秒，30~60秒的session访问量统计，访问步长：1~3个页面，4~6个页面等步长的访问统计
-                var sql_timebase_stat = s"select session_id from ${Constants.TABLE_USER_VISIT_ACTION} group by session_id having (max(action_time)-min(action_time)) "
-                var sql_pagebase_stat = s"select session_id from ${Constants.TABLE_USER_VISIT_ACTION} group by session_id having count(*) "
+                // fixme: 这里需要封装和优化
+                // 实现自定义累加器完成多个聚合统计业务的计算,
+                // 统计业务包括访问时长：1~3秒，4~6秒，7~9秒，10~30秒，30~60秒的session访问量统计，
+                // 访问步长：1~3个页面，4~6个页面等步长的访问统计
+                var sql_timebase_stat = s"select session_id from ${Constants.TABLE_USER_VISIT_ACTION} " +
+                    s"group by session_id having (max(action_time)-min(action_time)) "
+                var sql_pagebase_stat = s"select session_id from ${Constants.TABLE_USER_VISIT_ACTION} " +
+                    s"group by session_id having count(*) "
 
                 def generateSQLRangeStr(low: Int, high: Int): String = {
                     s"between $low and $high"
@@ -55,13 +61,15 @@ object UserVisitAnalyzeService {
 
                 def doTimeBasedStatInRange(low: Int, high: Int): Unit = {
                     // 1000表示从 ms --> s
-                    val tmp = sqlContext.sql(sql_timebase_stat + generateSQLRangeStr(low * 1000, high * 1000)).rdd.collect()
+                    val tmp = sqlContext.sql(sql_timebase_stat + generateSQLRangeStr(low * 1000, high * 1000))
+                        .rdd.collect()
                     println(s"${low}~${high}秒: (共${tmp.length}个) ")
                     tmp.foreach(row => println(row(0)))
                 }
 
                 def doPageBasedStatInRange(low: Int, high: Int): Unit = {
-                    val tmp = sqlContext.sql(sql_pagebase_stat + generateSQLRangeStr(low, high)).rdd.collect()
+                    val tmp = sqlContext.sql(sql_pagebase_stat + generateSQLRangeStr(low, high))
+                        .rdd.collect()
                     println(s"${low}~${high}个页面:(共${tmp.length}个)")
                     tmp.foreach(row => println(row(0)))
                     println()
@@ -101,20 +109,23 @@ object UserVisitAnalyzeService {
         assert(userInput.getStartDate != null, "error,parameter startDate is required")
         assert(userInput.getEndDate != null, "error,parameter ebdDate is required")
         // 查询
-        sqlContext.sql(s"select * from ${Constants.TABLE_USER_VISIT_ACTION} as t1, ${Constants.TABLE_USER_INFO} as t2 " +
+        sqlContext.sql(s"select * from ${Constants.TABLE_USER_VISIT_ACTION} as t1, " +
+            s"${Constants.TABLE_USER_INFO} as t2 " +
             s"WHERE t1.user_id = t2.user_id " +
             s"AND date >= '${userInput.getStartDate.getTime}' AND date< '${userInput.getEndDate.getTime}'")
             .rdd
     }
 
-    // 根据用户的查询条件 返回的结果RDD, 一个或者多个：年龄范围，职业（多选），城市（多选），搜索词（多选），点击品类（多选）进行数据过滤,session时间范围是必选的
+    // 根据用户的查询条件 返回的结果RDD,
+    // 一个或者多个：年龄范围，职业（多选），城市（多选），搜索词（多选），点击品类（多选）进行数据过滤,session时间范围是必选的
     def filterRDD(sqlContext: SQLContext, userInput: UserInput): RDD[Row] = {
         // 检查输入合法性
         assert(userInput.getStartDate != null, "error,parameter startDate is required")
         assert(userInput.getEndDate != null, "error,parameter ebdDate is required")
         val limit = constructSqlLimitHelp(userInput)
         val sql = s"select * from ${Constants.TABLE_USER_VISIT_ACTION} as t1, ${Constants.TABLE_USER_INFO} as t2 " +
-            s"WHERE t1.user_id = t2.user_id AND date >= '${userInput.getStartDate.getTime}' AND date< '${userInput.getEndDate.getTime}' " + limit
+            s"WHERE t1.user_id = t2.user_id " +
+            s"AND date >= '${userInput.getStartDate.getTime}' AND date< '${userInput.getEndDate.getTime}' " + limit
         sqlContext.sql(sql).rdd
     }
 
@@ -124,8 +135,10 @@ object UserVisitAnalyzeService {
         assert(userInput.getStartDate != null, "error,parameter startDate is required")
         assert(userInput.getEndDate != null, "error,parameter ebdDate is required")
         val limit = constructSqlLimitHelp(userInput)
-        val sql = s"select click_product_id,order_product_ids,pay_product_ids from ${Constants.TABLE_USER_VISIT_ACTION} as t1, ${Constants.TABLE_USER_INFO} as t2 " +
-            s"WHERE t1.user_id = t2.user_id AND date >= '${userInput.getStartDate.getTime}' AND date<= '${userInput.getEndDate.getTime}' " + limit
+        val sql = s"select click_product_id,order_product_ids,pay_product_ids " +
+            s"from ${Constants.TABLE_USER_VISIT_ACTION} as t1, ${Constants.TABLE_USER_INFO} as t2 " +
+            s"WHERE t1.user_id = t2.user_id " +
+            s"AND date >= '${userInput.getStartDate.getTime}' AND date<= '${userInput.getEndDate.getTime}' " + limit
         sqlContext.sql(sql).rdd.map(row => {
             if (!row.isNullAt(0)) {
                 (row.getLong(0), new ProductStat(1, 0, 0))
@@ -174,7 +187,8 @@ object UserVisitAnalyzeService {
 
     //sessionid=value|searchword=value|clickcaterory=value|age=value|professional=value|city=value|sex=value
     private def formatToValue(row: Row): String = {
-        s"sessionid=${row.get(2)}|searchword=${row.get(5)}|clickcaterory=${row.get(6)}|age=${row.get(16)}|professional=${row.get(17)}|city=${row.get(18)}|sex=${row.get(19)}"
+        s"sessionid=${row.get(2)}|searchword=${row.get(5)}|clickcaterory=${row.get(6)}|age=${row.get(16)}|" +
+            s"professional=${row.get(17)}|city=${row.get(18)}|sex=${row.get(19)}"
     }
 
     private def getUserInput(dbConnection: Connection): UserInput = {
