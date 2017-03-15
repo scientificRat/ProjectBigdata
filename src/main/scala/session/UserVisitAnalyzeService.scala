@@ -15,17 +15,9 @@ import scalautils.SparkUtils
 /**
   * Created by sky on 2017/3/11.
   */
-object UserVisitAnalyzeService {
+class UserVisitAnalyzeService(sparkContext: SparkContext, sqlContext: SQLContext) extends Thread {
 
-    def main(args: Array[String]): Unit = {
-        // 配置Spark
-        val sparkConf = new SparkConf().setAppName(Constants.SPARK_APP_NAME).setMaster("local[4]")
-        // 负责和集群通信
-        val sparkContext = new SparkContext(sparkConf)
-        // spark sql是建立在sparkCores上面的，那么自然而然需要使用到sparkContext进行通信
-        val sqlContext = new SQLContext(sparkContext)
-
-        // 获取输入
+    override def run(): Unit = {
         val dbConnection = DBHelper.getDBConnection
         val userInput = getUserInput(dbConnection)
         // 读取数据
@@ -92,8 +84,7 @@ object UserVisitAnalyzeService {
                 rdd.foreach(println)
             }
         }
-        // 释放资源
-        sparkContext.stop()
+
     }
 
     // 将查询输出转化为标准化的形式
