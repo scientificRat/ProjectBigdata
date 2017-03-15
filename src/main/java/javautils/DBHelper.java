@@ -14,7 +14,6 @@ public class DBHelper {
     }
     static ComboPooledDataSource DataSource = new ComboPooledDataSource("stupidRatProj");
 
-
     public static Connection getDBConnection() throws SQLException {
         return DataSource.getConnection();
     }

@@ -5,44 +5,35 @@ import javautils.DBHelper
 
 import com.google.gson.Gson
 import constants.Constants
+import dao.DAOFactory
 import domain.{ProductStat, UserInput}
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SQLContext}
-import org.apache.spark.{SparkConf, SparkContext}
 
 import scalautils.SparkUtils
 
 /**
-  * Created by sky on 2017/3/11.
+  * Created by sky on 2017/3/15.
   */
-object UserVisitAnalyzeService {
-    def main(args: Array[String]): Unit = {
-        //TA: 不要把所有逻辑写在main里
-        //TA: 傻逼，不是这意思
-        isNotMain(args)
-    }
-
-    def isNotMain(args: Array[String]): Unit = {
-        // 配置Spark
-        val sparkConf = new SparkConf().setAppName(Constants.SPARK_APP_NAME).setMaster("local[4]")
-        // 负责和集群通信
-        val sparkContext = new SparkContext(sparkConf)
-        // spark sql是建立在sparkCores上面的，那么自然而然需要使用到sparkContext进行通信
-        val sqlContext = new SQLContext(sparkContext)
-
-        // 获取输入
+class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFromMySQLService
+(sparkContext: SparkContext, sqlContext: SQLContext) extends Thread {
+    override def run(): Unit ={
+        // 获得用户输入（输入中ID即为任务类型）
         val dbConnection = DBHelper.getDBConnection
-        val userInput = getUserInput(dbConnection)
+        val userInput = DAOFactory.getUIDAO(dbConnection).getUserInput
 
+        // TODO: 本地读入数据仅作测试，需要修改为从数据库中读入，后续请删除
         // 读取数据
         SparkUtils.loadLocalTestDataToTmpTable(sc = sparkContext, sqlContext = sqlContext)
+
         // 开始处理
         userInput.getTaskID match {
             case "1" => {
-//                sqlContext.sql(s"select * from ${Constants.TABLE_USER_VISIT_ACTION}").show()
+                //                sqlContext.sql(s"select * from ${Constants.TABLE_USER_VISIT_ACTION}").show()
                 // 在指定日期范围内，按照session粒度进行数据聚合
                 val rdd = aggregateSessionInDateRange(sqlContext, userInput)
-//                // 输出
+                //                // 输出
                 convertToFormattedRowOutput(rdd).foreach(println)
             }
             case "2" => {
@@ -207,25 +198,5 @@ object UserVisitAnalyzeService {
     private def formatToValue(row: Row): String = {
         s"sessionid=${row.get(2)}|searchword=${row.get(5)}|clickcaterory=${row.get(6)}|age=${row.get(16)}|" +
             s"professional=${row.get(17)}|city=${row.get(18)}|sex=${row.get(19)}"
-    }
-
-    private def getUserInput(dbConnection: Connection): UserInput = {
-        //fixme: debug only
-        val gson = new Gson()
-        val stmt = dbConnection.createStatement()
-
-        //        val inputJson01 = "{\"taskID\":\"1\",\"startDate\":\"2017-03-05\",\"endDate\":\"2017-04-06\"}"
-        //        val inputJson02 = "{\"taskID\":\"2\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40,\"cities\":[\"city6\",\"city48\",\"city77\"]}"
-        //        val inputJson021 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":20,\"endAge\":40,\"sex\":\"female\",\"searchWords\":[\"小米5\"],\"cities\":[\"city6\"]}";
-        //        val inputJson03 = "{\"taskID\":\"3\"}"
-        //        val inputJson04 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40,\"cities\":[\"city6\"]}"
-        //        val inputJson044 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40}"
-
-        val res = stmt.executeQuery("SELECT * FROM IDCproj ORDER BY ID LIMIT 1")
-        val input = if (res.next()) gson.fromJson(res.getString("JSON"), classOf[UserInput])
-        else null
-
-        stmt.close()
-        input
     }
 }
