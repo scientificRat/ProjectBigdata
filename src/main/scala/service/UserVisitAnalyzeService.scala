@@ -1,4 +1,4 @@
-package session
+package service
 
 import java.sql.Connection
 import javautils.DBHelper
