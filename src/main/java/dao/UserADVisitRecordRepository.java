@@ -11,12 +11,17 @@ import java.sql.SQLException;
 /**
  * Created by sky on 2017/3/15.
  */
-public class UserADVisitRecordRepository {
-    Connection dbConnection = null;
-
-    public UserADVisitRecordRepository() {
-        dbConnection = DBHelper.getDBConnection();
+public class UserADVisitRecordRepository extends Repository {
+    public UserADVisitRecordRepository(Connection dbConnection) {
+        super(dbConnection);
     }
+
+
+    //    Connection dbConnection = null;
+//
+//    public UserADVisitRecordRepository() {
+//        dbConnection = DBHelper.getDBConnection();
+//    }
 
     public MayNoneInteger queryVisitTime(String userID, String advertisementID, String dateOfDay) throws SQLException {
         String sql = "SELECT visit_time FROM user_ad_visit_record WHERE date_of_day=? AND user_id=? AND ad_id=?";

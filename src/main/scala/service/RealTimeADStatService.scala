@@ -52,7 +52,8 @@ class RealTimeADStatService(sparkContext: SparkContext,
             val time = new Date(attrs(0).toLong)
             val date_yyMMdd = new SimpleDateFormat("yy-MM-dd").format(time)
             ((date_yyMMdd, attrs(3), attrs(4)), 1L)
-        }).filter(tp => {
+        })
+            .filter(tp => {
             val userADVisitRecordRepository = new UserADVisitRecordRepository()
             !userADVisitRecordRepository.queryIsBlack(tp._1._1, tp._1._2, tp._1._3)
         })
@@ -65,7 +66,7 @@ class RealTimeADStatService(sparkContext: SparkContext,
                 val userID = tp._1._2
                 val adID = tp._1._3
                 val visitedTime = tp._2
-                val userADVisitRecordRepository = new UserADVisitRecordRepository()
+                val userADVisitRecordRepository = new UserADVisitRecordRepository(dbConnection)
                 val rst = userADVisitRecordRepository.queryVisitTime(userID, adID, dateOfDay)
                 if (rst.isNone) {
                     userADVisitRecordRepository
