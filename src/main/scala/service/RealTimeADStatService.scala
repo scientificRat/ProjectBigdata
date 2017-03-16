@@ -5,6 +5,7 @@ import java.util.Date
 import javautils.DBHelper
 
 import dao.{ADStatDataRepository, UserADVisitRecordRepository}
+import domain.RawRealTimeAd
 import org.apache.spark.streaming.{Duration, Seconds, StreamingContext}
 import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
 import org.apache.spark.streaming.kafka.KafkaUtils
@@ -40,33 +41,28 @@ class RealTimeADStatService(sparkContext: SparkContext,
     private val kafkaStream = KafkaUtils.createStream(streamContext, zkQuorum, groupID, topics)
 
     override def run(): Unit = {
-        // transform
-        // 产生/更新黑名单
-        kafkaStream.map(tp => {
+
+        val formatedSteram = kafkaStream.map(tp => {
             // 0时间 1省份 2城市 3userID 4adID
             val attrs = tp._2.split("\t")
-            val time = new Date(attrs(0).toLong)
-            val dateOfDay = new SimpleDateFormat("yyyy-MM-dd").format(time)
-            ((dateOfDay, attrs(3), attrs(4)), 1L)
-        }).reduceByKey(_ + _).foreachRDD(rdd => {
+            val dateOfDay = new SimpleDateFormat("yyyy-MM-dd").format(attrs(0).toLong)
+            new RawRealTimeAd(dateOfDay, attrs(1), attrs(2), attrs(3), attrs(4))
+        })
+        // 1日期 2省份 3城市 4userID 5adID
+        formatedSteram.cache()
+        // transform
+        // 产生/更新用户广告点击表
+        formatedSteram.map(ad => ((ad.getDateOfDay, ad.getUserID, ad.getAdvertisementID), 1L)).reduceByKey(_ + _).foreachRDD(rdd => {
             rdd.foreach(tp => {
-                val dateOfDay = tp._1._1
-                val userID = tp._1._2
-                val adID = tp._1._3
-                val visitedTime = tp._2
                 val dbConnection = DBHelper.getDBConnection()
                 val userADVisitRecordRepository = new UserADVisitRecordRepository(dbConnection)
-                userADVisitRecordRepository.insertOrUpdateOnExist(dateOfDay, userID, adID, visitedTime)
+                userADVisitRecordRepository.insertOrUpdateOnExist(tp._1._1, tp._1._2, tp._1._3, tp._2)
                 dbConnection.close()
             })
         })
 
-        // 过滤数据
-        val filteredStream = kafkaStream.map(tp => {
-            // 0日期 1省份 2城市 3userID 4adID
-            val attrs = tp._2.split("\t")
-            (attrs(3), (attrs(0), attrs(1), attrs(2), attrs(4)))
-        }).transform(rdd => {
+        //实时计算每天各省各城市各广告的点击量((dateOfDay,province,city,advertisementID),visitTime)
+        val filteredStream = formatedSteram.map(raw => (raw.getUserID, (raw.getDateOfDay, raw.getProvince, raw.getCity, raw.getAdvertisementID))).transform(rdd => {
             // read backList from  mysql database
             val dbConnection = DBHelper.getDBConnection()
             val userADVisitRecordRepository = new UserADVisitRecordRepository(dbConnection)
@@ -76,40 +72,20 @@ class RealTimeADStatService(sparkContext: SparkContext,
         }).map(tp => (tp._2, 1L))
 
 
-        //        // Iterator的迭代元组第一个String表示RDD key，第二个表示新的rdd value值序列，第三个option表示当前状态(访问量)，返回值是一个(key,new-state)值
-        //        def updateFunction(it: Iterator[((String, String, String, String), Seq[Long], Option[Long])]): Iterator[((String, String, String, String), Long)] = {
-        //            it.map(tp => {
-        //                (tp._1, tp._3.getOrElse(1L) + tp._2.sum)
-        //            })
-        //        }
-        //
-        //        val func = updateFunction _
-        streamContext.checkpoint("hdfs://192.168.242.201:9000/sparkstream")
-
-
-        //实时计算每天各省各城市各广告的点击量((dateOfDay,province,city,advertisementID),visitTime)
-        val statisticData = filteredStream
-            .updateStateByKey((it: Iterator[((String, String, String, String), Seq[Long], Option[Long])]) => {
-                it.map(tp => {
-                    (tp._1, tp._3.getOrElse(1L) + tp._2.sum)
-                })
-            }
-                , new HashPartitioner(streamContext.sparkContext.defaultParallelism), rememberPartitioner = true)
-
-
+        val statisticData = filteredStream.reduceByKey(_ + _)
         // 缓存 ((dateOfDay,province,city,advertisementID),visitTime)
-        statisticData.cache()
+        //        statisticData.cache()
 
-        statisticData.map(tp => ((tp._1._1, tp._1._2, tp._1._4), tp._2)).reduceByKey(_ + _)
-            .map(tp => ((tp._1._1, tp._1._2), (tp._1._3, tp._2))).groupByKey().foreachRDD(rdd => {
-            rdd.foreach(tp => {
-                val sorted_ads = tp._2.toList.sortWith(_._2 < _._2)
-                println(tp._1 + s"${sorted_ads(0)},${sorted_ads(1)},${sorted_ads(3)}")
+        //        statisticData.map(tp => ((tp._1._1, tp._1._2, tp._1._4), tp._2)).reduceByKey(_ + _)
+        //            .map(tp => ((tp._1._1, tp._1._2), (tp._1._3, tp._2))).groupByKey().foreachRDD(rdd => {
+        //            rdd.foreach(tp => {
+        //                val sorted_ads = tp._2.toList.sortWith(_._2 < _._2)
+        //                println(tp._1 + s"${sorted_ads(0)},${sorted_ads(1)},${sorted_ads(3)}")
+        //
+        //            })
+        //        })
 
-            })
-        })
-
-
+        //
         statisticData.foreachRDD(rdd => {
             rdd.foreach(tp => {
                 val dbConnection = DBHelper.getDBConnection()
@@ -119,7 +95,8 @@ class RealTimeADStatService(sparkContext: SparkContext,
             })
         })
 
-        statisticData.print()
+
+        //        statisticData.print()
 
         streamContext.start()
         streamContext.awaitTermination()

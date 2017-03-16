@@ -93,9 +93,9 @@ public class UserADVisitRecordRepository extends Repository {
             blackList.add(resultSet.getString(1));
         }
         preparedStatement.close();
-        System.out.println("*****blackList*********");
-        System.out.println(blackList);
-        System.out.println("**************");
+//        System.out.println("*****blackList*********");
+//        System.out.println(blackList);
+//        System.out.println("**************");
         return blackList.toArray(new String[0]);
     }
 
