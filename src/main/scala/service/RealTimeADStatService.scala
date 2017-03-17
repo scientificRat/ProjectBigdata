@@ -14,6 +14,13 @@ import org.apache.spark.streaming.kafka.KafkaUtils
   * Created by scientificRat on 2017/3/15.
   */
 
+
+/**
+  * Constants Zone
+  *
+  * 常量定义区，这些常量不是全局共享变量，
+  * 为提高模块内聚性没有写到全局的常量区
+  */
 object RealTimeADStatService extends Serializable {
     val DEFAULT_ZK_QUORUM = "192.168.242.201:2181,192.168.242.202:2181,192.168.242.203:2181"
     val DEFAULT_CONSUMER_GROUP_ID = "testGroup"
@@ -24,18 +31,22 @@ object RealTimeADStatService extends Serializable {
 
 
 /**
-  * @param zkQuorum Zookeeper quorum (hostname:port,hostname:port,..)
-  * @param groupID  The group id for this consumer
-  * @param topics   Map of (topic_name -> numPartitions) to consume. Each partition is consumed
-  *                 in its own thread
+  *
+  * @param sparkContext sparkContext
+  * @param zkQuorum     Zookeeper quorum (hostname:port,hostname:port,..)
+  * @param groupID      The group id for this consumer
+  * @param topics       Map of (topic_name -> numPartitions) to consume. Each partition is consumed
+  *                     in its own thread
+  * @param bachDuration The bach duration time
+  * @param checkPointAddress The checkPoint address, it's usually a directory of hadoop HDFS
   */
 class RealTimeADStatService(@transient sparkContext: SparkContext,
                             zkQuorum: String = RealTimeADStatService.DEFAULT_ZK_QUORUM,
                             groupID: String = RealTimeADStatService.DEFAULT_CONSUMER_GROUP_ID,
                             topics: Map[String, Int] = RealTimeADStatService.DEFAULT_PER_TOPIC_PARTITIONS,
                             bachDuration: Duration = RealTimeADStatService.DEFAULT_BATCH_DURATION,
-                            checkPointAddress: String = RealTimeADStatService.DEFAULT_CHECKPOINT_ADDRESS) extends Thread
-    with Serializable {
+                            checkPointAddress: String = RealTimeADStatService.DEFAULT_CHECKPOINT_ADDRESS)
+    extends Thread with Serializable {
 
     // 创建streamContext对象
     @transient
