@@ -29,7 +29,6 @@ public class UserInputDAO {
 
             if (rs.next()){
                 Gson gson = new Gson();
-                System.out.println(rs.getString("JSON"));
                 ui = gson.fromJson(rs.getString("JSON"), UserInput.class);
             }
         }

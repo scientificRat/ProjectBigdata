@@ -1,8 +1,8 @@
 package domain;
 
 import java.io.Serializable;
-import java.sql.Time;
 import java.sql.Timestamp;
+import java.sql.Date;
 
 /**
  * Created by sky on 2017/3/15.
@@ -33,7 +33,7 @@ public class SessionRecord implements Serializable {
     private String cityName;
     private String name;
     private int age;
-    private String profssional;
+    private String professional;
 
     public SessionRecord() {}
 
@@ -77,12 +77,12 @@ public class SessionRecord implements Serializable {
         this.age = age;
     }
 
-    public String getProfssional() {
-        return profssional;
+    public String getProfessional() {
+        return professional;
     }
 
-    public void setProfssional(String profssional) {
-        this.profssional = profssional;
+    public void setProfessional(String professional) {
+        this.professional = professional;
     }
 
     public String getSessionID() {
@@ -168,8 +168,8 @@ public class SessionRecord implements Serializable {
     @Override
     public String toString() {
         String str = sessionID;
-        str += "|" + date + "|" + userID + "|" + cityID + "|" + userName + "|" +
-                sex + "|" + cityName + "|" + name + "|" + age + "|" + profssional;
+        str += "|" + new Date(date).toString() + "|" + userID + "|" + cityID + "|" + userName + "|" +
+                sex + "|" + cityName + "|" + name + "|" + age + "|" + professional;
 
         String page = "\nPageRecord : [", time = "\nTime : [";
         for (int i = 0; i < pageRecord.length; ++i){
