@@ -2,8 +2,8 @@ package service
 
 import javautils.DBHelper
 
-import dao.{ADStatDataRepository, EverydayTop3ADRepository, PerMinuteADVisitRepository, UserADVisitRecordRepository}
-import domain.RawRealTimeAd
+import dao._
+import domain.{RawRealTimeAd, UserADVisitRecord}
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.{Duration, Seconds, StreamingContext}
 import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
@@ -14,11 +14,12 @@ import org.apache.spark.streaming.kafka.KafkaUtils
   * Created by scientificRat on 2017/3/15.
   */
 
-object RealTimeADStatService {
+object RealTimeADStatService extends Serializable {
     val DEFAULT_ZK_QUORUM = "192.168.242.201:2181,192.168.242.202:2181,192.168.242.203:2181"
     val DEFAULT_CONSUMER_GROUP_ID = "testGroup"
     val DEFAULT_PER_TOPIC_PARTITIONS = Map("AdRealTimeLog" -> 1)
     val DEFAULT_BATCH_DURATION = Seconds(5)
+    val DEFAULT_CHECKPOINT_ADDRESS = "hdfs://192.168.242.201:9000/sparkstream"
 }
 
 
@@ -28,28 +29,33 @@ object RealTimeADStatService {
   * @param topics   Map of (topic_name -> numPartitions) to consume. Each partition is consumed
   *                 in its own thread
   */
-class RealTimeADStatService(sparkContext: SparkContext,
+class RealTimeADStatService(@transient sparkContext: SparkContext,
                             zkQuorum: String = RealTimeADStatService.DEFAULT_ZK_QUORUM,
                             groupID: String = RealTimeADStatService.DEFAULT_CONSUMER_GROUP_ID,
                             topics: Map[String, Int] = RealTimeADStatService.DEFAULT_PER_TOPIC_PARTITIONS,
-                            bachDuration: Duration = RealTimeADStatService.DEFAULT_BATCH_DURATION) extends Thread {
+                            bachDuration: Duration = RealTimeADStatService.DEFAULT_BATCH_DURATION,
+                            checkPointAddress: String = RealTimeADStatService.DEFAULT_CHECKPOINT_ADDRESS) extends Thread
+    with Serializable {
 
     // 创建streamContext对象
+    @transient
     private val streamContext = new StreamingContext(sparkContext, Seconds(5))
+
     private val kafkaStream = KafkaUtils.createStream(streamContext, zkQuorum, groupID, topics)
 
 
     /**
       * 线程主体
+      * 更新黑名单数据, 过滤黑名单, 实时计算每天各省各城市各广告的点击量, 实时各个广告最近1小时内各分钟的点击量, 统计top3
       */
     override def run(): Unit = {
         // 标准化输入数据
         val formattedStream = getFormattedStream(kafkaStream)
         formattedStream.cache()
         // 更新黑名单数据
-        updateBlackList(formattedStream)
+        updateBlackList2(formattedStream)
         // 过滤黑名单
-        val filteredStream = getFilteredStream(formattedStream)
+        val filteredStream = getFilteredStream2(formattedStream)
         filteredStream.cache()
         // 实时计算每天各省各城市各广告的点击量((dateOfDay,province,city,advertisementID),visitTime) 并更新到mysql
         doADStatOfEveryDayEveryProvinceEveryCity(filteredStream)
@@ -67,7 +73,7 @@ class RealTimeADStatService(sparkContext: SparkContext,
     private def startTop3Stat(): Unit = {
         //开启计算top3线程
         new Thread(new Runnable {
-            override def run() = {
+            override def run(): Unit = {
                 val dbConnection = DBHelper.getDBConnection()
                 val repository = new EverydayTop3ADRepository(dbConnection)
                 while (true) {
@@ -111,6 +117,33 @@ class RealTimeADStatService(sparkContext: SparkContext,
     }
 
     /**
+      * 更新黑名单数据 第二种实现方法
+      * must be used with getFilteredStream2()
+      *
+      * @param dStream 数据
+      */
+    private def updateBlackList2(dStream: DStream[RawRealTimeAd]): Unit = {
+        // 建立checkpoint
+        streamContext.checkpoint(checkPointAddress)
+        // 形成新的用户访问数据
+        val userVisitRecords = dStream.map(ad => ((ad.getDateOfDayStr, ad.getUserID, ad.getAdvertisementID), 1L))
+            .updateStateByKey((it: Iterator[((String, String, String), Seq[Long], Option[Long])])
+            => {
+                it.map(e => (e._1, e._2.sum + e._3.getOrElse(0L)))
+            }, new HashPartitioner(streamContext.sparkContext.defaultParallelism), true)
+        // 向数据库写入黑名单数据
+        userVisitRecords.filter(_._2 >= 100).foreachRDD(rdd => {
+            rdd.foreach(ur => {
+                println(s"恶意刷单:$ur")
+                val dbConnection = DBHelper.getDBConnection()
+                val repository = new BlackListRepository(dbConnection)
+                repository.insertOrIgnoreOnExist(ur._1._1, ur._1._2)
+                dbConnection.close()
+            })
+        })
+    }
+
+    /**
       * 过滤黑名单
       *
       * @param dStream 数据
@@ -122,6 +155,24 @@ class RealTimeADStatService(sparkContext: SparkContext,
             val dbConnection = DBHelper.getDBConnection()
             val userADVisitRecordRepository = new UserADVisitRecordRepository(dbConnection)
             val blackListRdd = sparkContext.parallelize(userADVisitRecordRepository.queryBlackList()).map((_, 1))
+            dbConnection.close()
+            rdd.subtractByKey(blackListRdd)
+        }).map(_._2)
+    }
+
+    /**
+      * 过滤黑名单 第二种实现方法
+      * must be used with updateBlackList2(), updateBlackList will course error
+      *
+      * @param dStream 数据
+      * @return
+      */
+    private def getFilteredStream2(dStream: DStream[RawRealTimeAd]): DStream[RawRealTimeAd] = {
+        dStream.map(raw => (raw.getUserID, raw)).transform(rdd => {
+            // read backList from  mysql database
+            val dbConnection = DBHelper.getDBConnection()
+            val repository = new BlackListRepository(dbConnection)
+            val blackListRdd = sparkContext.parallelize(repository.queryBlackList()).map((_, 1))
             dbConnection.close()
             rdd.subtractByKey(blackListRdd)
         }).map(_._2)
