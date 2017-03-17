@@ -33,9 +33,9 @@ object SparkUtils {
                 StructField("search_keyword", StringType, nullable = true), //5
                 StructField("click_category_id", LongType, nullable = true), //6
                 StructField("click_product_id", LongType, nullable = true), //7
-                StructField("order_category_ids", StringType, nullable = true), //8
+                StructField("order_category_ids", LongType, nullable = true), //8
                 StructField("order_product_ids", LongType, nullable = true), //9
-                StructField("pay_category_ids", StringType, nullable = true), //10
+                StructField("pay_category_ids", LongType, nullable = true), //10
                 StructField("pay_product_ids", LongType, nullable = true), //11
                 StructField("city_id", LongType, nullable = true) //12
             )
@@ -47,8 +47,8 @@ object SparkUtils {
         //将RDD映射成rowRDD
         //fixme
         val sessionRowRDD = sessionRDD.map(s => Row(dateToLong(s(0)), strToLong(s(1)), s(2),
-            strToLong(s(3)), timestampToLong(s(4) + " " + s(5)), s(6), strToLong(s(7)), strToLong(s(8)), s(9),
-            strToLong(s(10)), s(11), strToLong(s(12)), strToLong(s(13))))
+            strToLong(s(3)), timestampToLong(s(4) + " " + s(5)), s(6), strToLong(s(7)), strToLong(s(8)), strToLong(s(9)),
+            strToLong(s(10)), strToLong(s(11)), strToLong(s(12)), strToLong(s(13))))
         //import sqlContext.implicits._
 
         //将schema信息应用到rowRDD上
@@ -60,13 +60,13 @@ object SparkUtils {
         //定义用户数据schema
         val userSchema = StructType(
             List(
-                StructField("user_id", LongType, nullable = true),
-                StructField("username", StringType, nullable = true),
-                StructField("name", StringType, nullable = true),
-                StructField("age", IntegerType, nullable = true),
-                StructField("professional", StringType, nullable = true),
-                StructField("city", StringType, nullable = true),
-                StructField("sex", StringType, nullable = true)
+                StructField("user_id", LongType, nullable = true), //1
+                StructField("username", StringType, nullable = true), //13
+                StructField("name", StringType, nullable = true), //14
+                StructField("age", IntegerType, nullable = true), //15
+                StructField("professional", StringType, nullable = true), //16
+                StructField("city", StringType, nullable = true), //17
+                StructField("sex", StringType, nullable = true) //18
             )
         )
         //从指定位置创建RDD

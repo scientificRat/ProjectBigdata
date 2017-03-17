@@ -1,11 +1,12 @@
 package domain;
 
+import java.io.Serializable;
 import java.sql.Timestamp;
 
 /**
  * Created by sky on 2017/3/15.
  */
-public class TaskRecord {
+public class TaskRecord implements Serializable {
     private int category;
     private Timestamp finishTime;
 

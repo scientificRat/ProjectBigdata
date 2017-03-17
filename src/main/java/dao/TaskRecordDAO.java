@@ -1,10 +1,10 @@
 package dao;
 
+import constants.Constants;
 import domain.TaskRecord;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
@@ -21,7 +21,7 @@ public class TaskRecordDAO {
         PreparedStatement ppstmt = null;
 
         try{
-            ppstmt =  cnct.prepareStatement("INSERT INTO taskrecord VALUES(?, ?, ?, ?)");
+            ppstmt =  cnct.prepareStatement("INSERT INTO " + Constants.TABLE_TASK_RECORD_INFO + " VALUES(?, ?, ?, ?)");
             ppstmt.setInt(1, tr.getCategory());
             ppstmt.setTimestamp(2, tr.getSubmitTime());
             ppstmt.setTimestamp(3, tr.getFinishTime());

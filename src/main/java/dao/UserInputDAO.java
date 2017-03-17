@@ -1,6 +1,7 @@
 package dao;
 
 import com.google.gson.Gson;
+import constants.Constants;
 import domain.UserInput;
 
 import java.sql.Connection;
@@ -23,12 +24,13 @@ public class UserInputDAO {
         PreparedStatement ppstmt = null;
 
         try{
-            ppstmt = cnct.prepareStatement("SELECT * FROM IDCproj ORDER BY ID LIMIT 1");
+            ppstmt = cnct.prepareStatement("SELECT * FROM " + Constants.TABLE_TASK_INFO + " ORDER BY ID LIMIT 1");
             ResultSet rs = ppstmt.executeQuery();
 
             if (rs.next()){
                 Gson gson = new Gson();
-                gson.fromJson(rs.getString("JSON"), UserInput.class);
+                System.out.println(rs.getString("JSON"));
+                ui = gson.fromJson(rs.getString("JSON"), UserInput.class);
             }
         }
         catch (SQLException sqlerr){

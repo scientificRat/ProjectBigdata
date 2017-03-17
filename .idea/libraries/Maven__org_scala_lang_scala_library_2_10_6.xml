@@ -3,9 +3,9 @@
     <properties>
       <option name="languageLevel" value="Scala_2_10" />
       <compiler-classpath>
-        <root url="file://$USER_HOME$/Desktop/repository/org/scala-lang/scala-compiler/2.10.6/scala-compiler-2.10.6.jar" />
-        <root url="file://$USER_HOME$/Desktop/repository/org/scala-lang/scala-library/2.10.6/scala-library-2.10.6.jar" />
-        <root url="file://$USER_HOME$/Desktop/repository/org/scala-lang/scala-reflect/2.10.6/scala-reflect-2.10.6.jar" />
+        <root url="file://C:/Work/Maven/repository/org/scala-lang/scala-compiler/2.10.6/scala-compiler-2.10.6.jar" />
+        <root url="file://C:/Work/Maven/repository/org/scala-lang/scala-library/2.10.6/scala-library-2.10.6.jar" />
+        <root url="file://C:/Work/Maven/repository/org/scala-lang/scala-reflect/2.10.6/scala-reflect-2.10.6.jar" />
       </compiler-classpath>
     </properties>
     <CLASSES>

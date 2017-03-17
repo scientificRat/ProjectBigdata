@@ -19,7 +19,14 @@ object UserVisitAnalyzeService {
     def main(args: Array[String]): Unit = {
         //TA: 不要把所有逻辑写在main里
         //TA: 傻逼，不是这意思
-        isNotMain(args)
+        val sparkConf = new SparkConf().setAppName(Constants.SPARK_APP_NAME).setMaster("local[4]")
+        // 负责和集群通信
+        val sparkContext = new SparkContext(sparkConf)
+        // spark sql是建立在sparkCores上面的，那么自然而然需要使用到sparkContext进行通信
+        val sqlContext = new SQLContext(sparkContext)
+
+        new AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFromMySQLBySessionNotJustActionService(sparkContext, sqlContext).start()
+        //isNotMain(args)
     }
 
     def isNotMain(args: Array[String]): Unit = {
@@ -118,18 +125,13 @@ object UserVisitAnalyzeService {
         assert(userInput.getStartDate != null, "error,parameter startDate is required")
         assert(userInput.getEndDate != null, "error,parameter endDate is required")
 
-        if (Constants.USING_RDD){
-
-        }
-        else{
-            // 查询
-            val sql =s"select * from ${Constants.TABLE_USER_VISIT_ACTION} as t1, " +
-                s"${Constants.TABLE_USER_INFO} as t2 " +
-                s"WHERE t1.user_id = t2.user_id " +
-                s"AND date >= '${userInput.getStartDate.getTime}' AND date< '${userInput.getEndDate.getTime}'"
-            println(sql)
-            sqlContext.sql(sql).rdd
-        }
+        // 查询
+        val sql =s"select * from ${Constants.TABLE_USER_VISIT_ACTION} as t1, " +
+            s"${Constants.TABLE_USER_INFO} as t2 " +
+            s"WHERE t1.user_id = t2.user_id " +
+            s"AND date >= '${userInput.getStartDate.getTime}' AND date< '${userInput.getEndDate.getTime}'"
+        println(sql)
+        sqlContext.sql(sql).rdd
     }
 
     // 根据用户的查询条件 返回的结果RDD,
