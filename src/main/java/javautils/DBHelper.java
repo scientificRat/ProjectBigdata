@@ -12,7 +12,7 @@ import java.sql.SQLException;
 public class DBHelper {
 
     //default database
-    private static final String DATABASE_URL = "jdbc:mysql://192.168.2.3/stupidRat";
+    private static final String DATABASE_URL = "jdbc:mysql://192.168.2.9/stupidRat";
     private static final String DATABASE_USER_NAME = "root";
     private static final String DATABASE_USER_PASSWORD = "123456";
 

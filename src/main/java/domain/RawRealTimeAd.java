@@ -1,12 +1,15 @@
 package domain;
 
 import java.io.Serializable;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * Created by sky on 2017/3/16.
  */
 public class RawRealTimeAd implements Serializable {
-    private String dateOfDay;
+
+    private long date;
     private String province;
     private String city;
     private String userID;
@@ -16,20 +19,28 @@ public class RawRealTimeAd implements Serializable {
     public RawRealTimeAd() {
     }
 
-    public RawRealTimeAd(String dateOfDay, String province, String city, String userID, String advertisementID) {
-        this.dateOfDay = dateOfDay;
+    public RawRealTimeAd(long date, String province, String city, String userID, String advertisementID) {
+        this.date = date;
         this.province = province;
         this.city = city;
         this.userID = userID;
         this.advertisementID = advertisementID;
     }
 
-    public String getDateOfDay() {
-        return dateOfDay;
+    public String getDateOfDayStr() {
+        return new SimpleDateFormat("yyyy-MM-dd").format(date);
     }
 
-    public void setDateOfDay(String dateOfDay) {
-        this.dateOfDay = dateOfDay;
+    public Date getDateOfMinute(){
+        return new Date(getMinute()*60*1000);
+    }
+
+    public long getDate() {
+        return date;
+    }
+
+    public long getMinute() {
+        return date / (60 * 1000);
     }
 
     public String getUserID() {

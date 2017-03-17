@@ -26,13 +26,4 @@ public class ADStatDataRepository extends Repository {
         preparedStatement.execute();
         preparedStatement.close();
     }
-
-    public String queryEveryDayTop3OfProvince() throws SQLException {
-        String sql = "SELECT ad_id FROM stupidrat.ad_statistic_data WHERE ad_id  ";
-        PreparedStatement preparedStatement = dbConnection.prepareStatement(sql);
-
-
-        preparedStatement.close();
-        return null;
-    }
 }

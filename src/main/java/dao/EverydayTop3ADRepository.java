@@ -13,20 +13,17 @@ public class EverydayTop3ADRepository extends Repository {
         super(dbConnection);
     }
 
-    public void insertOrUpdateOnExist(String dateOfDay, String province, String firstAD, String secondAD, String thirdAD) throws SQLException {
-        String sql = "INSERT INTO stupidrat.everyday_top3_ad_of_province(date_of_day, province, first_ad_id, second_ad_id, third_ad_id) VALUES (?,?,?,?,?) " +
-                "ON DUPLICATE KEY UPDATE first_ad_id= ?, second_ad_id = ? , third_ad_id = ?";
+    public void doJob() throws SQLException {
+        String sql =
+                "REPLACE INTO everyday_top3_ad_of_province (date_of_day, province, top3_ad)" +
+                "  SELECT date_of_day,province," +
+                "    GROUP_CONCAT(CONCAT('(', ad_id, ',', visit_time, ')') ORDER BY visit_time DESC SEPARATOR ',') AS top3_ad" +
+                "  FROM ad_statistic_data AS t1" +
+                "  WHERE 3 > (SELECT count(*)" +
+                "             FROM ad_statistic_data AS t2" +
+                "             WHERE t1.date_of_day = t2.date_of_day AND t1.province = t2.province AND t2.visit_time > t1.visit_time)" +
+                "  GROUP BY date_of_day, province";
         PreparedStatement preparedStatement = dbConnection.prepareStatement(sql);
-
-        preparedStatement.setString(1, dateOfDay);
-        preparedStatement.setString(2, province);
-        preparedStatement.setString(3, firstAD);
-        preparedStatement.setString(4, secondAD);
-        preparedStatement.setString(5, thirdAD);
-        preparedStatement.setString(6, firstAD);
-        preparedStatement.setString(7, secondAD);
-        preparedStatement.setString(8, thirdAD);
-
         preparedStatement.execute();
         preparedStatement.close();
     }
