@@ -1,6 +1,5 @@
 package service
 
-import java.text.SimpleDateFormat
 import javautils.DBHelper
 
 import dao.{ADStatDataRepository, EverydayTop3ADRepository, PerMinuteADVisitRepository, UserADVisitRecordRepository}
@@ -12,9 +11,8 @@ import org.apache.spark.streaming.kafka.KafkaUtils
 
 
 /**
-  * Created by sky on 2017/3/15.
+  * Created by scientificRat on 2017/3/15.
   */
-
 
 object RealTimeADStatService {
     val DEFAULT_ZK_QUORUM = "192.168.242.201:2181,192.168.242.202:2181,192.168.242.203:2181"
@@ -40,6 +38,32 @@ class RealTimeADStatService(sparkContext: SparkContext,
     private val streamContext = new StreamingContext(sparkContext, Seconds(5))
     private val kafkaStream = KafkaUtils.createStream(streamContext, zkQuorum, groupID, topics)
 
+
+    /**
+      * 线程主体
+      */
+    override def run(): Unit = {
+        // 标准化输入数据
+        val formattedStream = getFormattedStream(kafkaStream)
+        formattedStream.cache()
+        // 更新黑名单数据
+        updateBlackList(formattedStream)
+        // 过滤黑名单
+        val filteredStream = getFilteredStream(formattedStream)
+        filteredStream.cache()
+        // 实时计算每天各省各城市各广告的点击量((dateOfDay,province,city,advertisementID),visitTime) 并更新到mysql
+        doADStatOfEveryDayEveryProvinceEveryCity(filteredStream)
+        // 实时各个广告最近1小时内各分钟的点击量 并写入mysql
+        doADStatOfRecentHour(filteredStream)
+        // 统计top3
+        startTop3Stat()
+        streamContext.start()
+        streamContext.awaitTermination()
+    }
+
+    /**
+      * 开启统计top3的独立线程
+      */
     private def startTop3Stat(): Unit = {
         //开启计算top3线程
         new Thread(new Runnable {
@@ -55,6 +79,12 @@ class RealTimeADStatService(sparkContext: SparkContext,
         }).start()
     }
 
+    /**
+      * 标准化输入数据
+      *
+      * @param dStream 数据
+      * @return
+      */
     private def getFormattedStream(dStream: DStream[(String, String)]): DStream[RawRealTimeAd] = {
         dStream.map(tp => {
             // 0时间 1省份 2城市 3userID 4adID
@@ -63,8 +93,14 @@ class RealTimeADStatService(sparkContext: SparkContext,
         })
     }
 
-    private def updateBlackList(formattedStream: DStream[RawRealTimeAd]): Unit = {
-        formattedStream.map(ad => ((ad.getDateOfDayStr, ad.getUserID, ad.getAdvertisementID), 1L)).reduceByKey(_ + _).foreachRDD(rdd => {
+    /**
+      * 更新黑名单数据
+      *
+      * @param dStream 数据
+      */
+    private def updateBlackList(dStream: DStream[RawRealTimeAd]): Unit = {
+        dStream.map(ad => ((ad.getDateOfDayStr, ad.getUserID, ad.getAdvertisementID), 1L))
+            .reduceByKey(_ + _).foreachRDD(rdd => {
             rdd.foreach(tp => {
                 val dbConnection = DBHelper.getDBConnection()
                 val userADVisitRecordRepository = new UserADVisitRecordRepository(dbConnection)
@@ -74,8 +110,14 @@ class RealTimeADStatService(sparkContext: SparkContext,
         })
     }
 
-    private def getFilteredStream(formattedStream: DStream[RawRealTimeAd]): DStream[RawRealTimeAd] = {
-        formattedStream.map(raw => (raw.getUserID, raw)).transform(rdd => {
+    /**
+      * 过滤黑名单
+      *
+      * @param dStream 数据
+      * @return
+      */
+    private def getFilteredStream(dStream: DStream[RawRealTimeAd]): DStream[RawRealTimeAd] = {
+        dStream.map(raw => (raw.getUserID, raw)).transform(rdd => {
             // read backList from  mysql database
             val dbConnection = DBHelper.getDBConnection()
             val userADVisitRecordRepository = new UserADVisitRecordRepository(dbConnection)
@@ -92,12 +134,17 @@ class RealTimeADStatService(sparkContext: SparkContext,
       */
     private def doADStatOfEveryDayEveryProvinceEveryCity(dStream: DStream[RawRealTimeAd]): Unit = {
         // 映射到((dateOfDay,province,city,advertisementID),visitTime)并求和
-        val statisticData = dStream.map(raw => ((raw.getDateOfDayStr, raw.getProvince, raw.getCity, raw.getAdvertisementID), 1L)).reduceByKey(_ + _)
+        val statisticData = dStream.map(raw =>
+            ((raw.getDateOfDayStr, raw.getProvince, raw.getCity, raw.getAdvertisementID), 1L)).reduceByKey(_ + _)
         statisticData.foreachRDD(rdd => {
             rdd.foreach(tp => {
                 val dbConnection = DBHelper.getDBConnection()
                 val adStatDataRepository = new ADStatDataRepository(dbConnection)
-                adStatDataRepository.insertOrUpdateOnExist(tp._1._1.asInstanceOf[String], tp._1._2.asInstanceOf[String], tp._1._3.asInstanceOf[String], tp._1._4.asInstanceOf[String], tp._2)
+                adStatDataRepository.insertOrUpdateOnExist(
+                    tp._1._1.asInstanceOf[String],
+                    tp._1._2.asInstanceOf[String],
+                    tp._1._3.asInstanceOf[String],
+                    tp._1._4.asInstanceOf[String], tp._2)
                 dbConnection.close()
             })
         })
@@ -109,11 +156,10 @@ class RealTimeADStatService(sparkContext: SparkContext,
       * @param dStream 数据
       */
     private def doADStatOfRecentHour(dStream: DStream[RawRealTimeAd]): Unit = {
-        val recentHourStat = dStream.map(raw => ((raw.getDateOfMinute, raw.getAdvertisementID), 1L)).reduceByKeyAndWindow((a: Long, b: Long) => a + b, Seconds(60), Seconds(5))
+        val recentHourStat = dStream.map(raw => ((raw.getDateOfMinute, raw.getAdvertisementID), 1L))
+            .reduceByKeyAndWindow((a: Long, b: Long) => a + b, Seconds(60), Seconds(5))
         recentHourStat.foreachRDD(rdd => {
             rdd.foreach(tp => {
-                val formattedTime = new SimpleDateFormat("hh:mm").format(tp._1._1)
-                println(s"$formattedTime\t${tp._1._2}\t${tp._2}")
                 // 更新数据库
                 val dbConnection = DBHelper.getDBConnection()
                 val repository = new PerMinuteADVisitRepository(dbConnection)
@@ -124,24 +170,5 @@ class RealTimeADStatService(sparkContext: SparkContext,
         })
     }
 
-    override def run(): Unit = {
-        // 标准化输入数据
-        val formattedStream = getFormattedStream(kafkaStream)
-        formattedStream.cache()
-        // 更新黑名单数据
-        updateBlackList(formattedStream)
-        // 过滤黑名单
-        val filteredStream = getFilteredStream(formattedStream)
-        filteredStream.cache()
-        // 实时计算每天各省各城市各广告的点击量((dateOfDay,province,city,advertisementID),visitTime) 并更新到mysql
-        doADStatOfEveryDayEveryProvinceEveryCity(filteredStream)
-        // 实时各个广告最近1小时内各分钟的点击量 并写入mysql
-        val recentHourStat = filteredStream.map(raw => ((raw.getDateOfMinute, raw.getAdvertisementID), 1L)).reduceByKeyAndWindow((a: Long, b: Long) => a + b, Seconds(60), Seconds(5))
-        doADStatOfRecentHour(filteredStream)
-        // 统计top3
-        startTop3Stat()
-        streamContext.start()
-        streamContext.awaitTermination()
-    }
 
 }
