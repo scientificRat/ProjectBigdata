@@ -166,9 +166,6 @@ class RealTimeADStatService(sparkContext: SparkContext,
                 repository.insertOrUpdateOnExist(tp._1._1, tp._1._2, tp._2)
                 dbConnection.close()
             })
-            println("-------------")
         })
     }
-
-
 }
