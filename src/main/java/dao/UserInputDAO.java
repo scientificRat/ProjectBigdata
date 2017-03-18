@@ -31,6 +31,7 @@ public class UserInputDAO {
             if (rs.next()){
                 Gson gson = new Gson();
                 ui = gson.fromJson(rs.getString("JSON"), UserInput.class);
+                ui.setSubmitTime(rs.getTimestamp("submit_time"));
             }
             ppstmt2.executeUpdate();
         }

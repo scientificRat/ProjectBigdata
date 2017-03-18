@@ -1,11 +1,13 @@
 package service
 
+import java.sql.Timestamp
+import java.util.Date
 import javautils.DBHelper
 
 import acc.AggregationStatistics
 import constants.Constants
-import dao.DAOFactory
-import domain.{SessionRecord, UserInput}
+import dao.{DAOFactory, TaskRecordDAO}
+import domain.{SessionRecord, TaskRecord, UserInput}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
@@ -38,6 +40,8 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
                 //val timeRec = System.currentTimeMillis()
                 println(s"Task ${userInput.getTaskID} : ")
                 val timeRec = System.currentTimeMillis()
+                val taskRec = new TaskRecord
+
                 userInput.getTaskID match {
                     case "1" => {
                         // 在指定日期范围内，按照session粒度进行数据聚合
@@ -48,37 +52,65 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
                         val rdd = aggregateSessionByDate(sqlContext, userInput.getStartDate.getTime, userInput.getEndDate.getTime)
                         // 输出
                         val res = rdd.collect()
-                        println(s"Cost : ${System.currentTimeMillis() - timeRec} ms")
-                        println(s"Total ${res.length} results")
-                        println("10 results : ")
-                        res.take(10).foreach(s => println(SessionRecord.toStringOutPut(s._2)))
+                        taskRec.setCategory(userInput.getTaskID.toInt)
+                        taskRec.setSubmitTime(userInput.getSubmitTime)
+
+                        var resString = s"Total ${res.length} results"
+                        resString += "10 results : "
+                        res.take(10).foreach(s => resString += SessionRecord.toStringOutPut(s._2) + '\n')
+                        taskRec.setResult(resString)
+                        taskRec.setFinishTime(new Timestamp(System.currentTimeMillis))
                     }
                     case "2" => {
                         // 根据用户的查询条件 返回的结果RDD,
                         // 一个或者多个：年龄范围，职业（多选），城市（多选），搜索词（多选），点击品类（多选）进行数据过滤,session时间范围是必选的
 
                         val rdd = queryRDD(sqlContext, userInput)
-                        println(s"Cost : ${System.currentTimeMillis() - timeRec} ms")
                         // 输出
-                        rdd.collect().foreach(s => println(SessionRecord.toStringOutPut(s._2)))
+                        taskRec.setCategory(userInput.getTaskID.toInt)
+                        taskRec.setSubmitTime(userInput.getSubmitTime)
+
+                        var resString = ""
+                        rdd.collect().foreach(s => resString += SessionRecord.toStringOutPut(s._2) + '\n')
+                        taskRec.setResult(resString)
+                        taskRec.setFinishTime(new Timestamp(System.currentTimeMillis))
                     }
                     case "3" => {
                         val sessionDF = sqlContext.table(s"${Constants.TABLE_USER_VISIT_ACTION}")
+                        val sessionRDD = sessionDF.rdd.map(row => (row.getString(2), row))
+                            .groupByKey.mapValues(Transformer.sessionRowsToRecord).map(kv => (kv._2.getUserID, kv._2))
+
                         // join the session and user info
                         val userDF = sqlContext.table(s"${Constants.TABLE_USER_INFO}")
-                        println(s"Cost : ${System.currentTimeMillis() - timeRec} ms")
-                        val rdd = sessionDF.join(userDF, Seq("user_id")).rdd
-                        println(AggregationStatistics.aggregationStatics(sparkContext,rdd.groupBy(_.getString(2)).map(Transformer.rowsToSessionRecord)))
+                        val userRDD = userDF.rdd.map(row => (row.getLong(0), row))
+                        val userIDRDD = sessionRDD.join(userRDD).mapValues(Transformer.addUserInfoToRecord)
+                        val rdd = userIDRDD.map(kv => (kv._2.getSessionID, kv._2))
+
+                        // 输出
+                        taskRec.setCategory(userInput.getTaskID.toInt)
+                        taskRec.setSubmitTime(userInput.getSubmitTime)
+
+                        val resString = AggregationStatistics.aggregationStatics(sparkContext, rdd).toString
+                        taskRec.setResult(resString)
+                        taskRec.setFinishTime(new Timestamp(System.currentTimeMillis))
                     }
                     case "4" => {
                         // 对通过筛选条件的session，按照各个品类的点击、下单和支付次数，降序排列，获取前10个热门品类
                         val array = getTop10Category(sqlContext, userInput)
 
-                        println(s"Cost : ${System.currentTimeMillis() - timeRec} ms")
-                        println("Top 10 Hot Goods : ")
-                        array.foreach(s => println(s))
+                        // 输出
+                        taskRec.setCategory(userInput.getTaskID.toInt)
+                        taskRec.setSubmitTime(userInput.getSubmitTime)
+
+                        var resString = "Top 10 Hot Goods : "
+                        array.foreach(s => resString += s.toString + '\n')
+                        taskRec.setResult(resString)
+                        taskRec.setFinishTime(new Timestamp(System.currentTimeMillis))
                     }
                 }
+
+                DAOFactory.getTRDAO(dbConnection).insertTaskRecord(taskRec)
+                println(s"Cost : ${System.currentTimeMillis() - timeRec} ms")
             }
         )
 
@@ -88,7 +120,7 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
         DBHelper.closeConnection()
     }
 
-    def aggregateSessionByDate(sqlContext : SQLContext, beg : Long, end : Long): RDD[(String, SessionRecord)] = {
+    def aggregateSessionByDate(sqlContext: SQLContext, beg: Long, end: Long): RDD[(String, SessionRecord)] = {
         // filter by date limit and aggregate
         val sessionDF = sqlContext.table(s"${Constants.TABLE_USER_VISIT_ACTION}")
         val sessionRDD = sessionDF.rdd.filter(row => row.getLong(0) > beg &&
@@ -120,22 +152,22 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
             .groupByKey.mapValues(Transformer.sessionRowsToRecord).map(kv => (kv._2.getUserID, kv._2))
 
         // filter age if required
-        if (userInput.getStartAge != null && userInput.getEndAge != null){
+        if (userInput.getStartAge != null && userInput.getEndAge != null) {
             userRDD = userRDD.filter(u => u.getInt(3) > userInput.getStartAge &&
                 u.getInt(3) < userInput.getEndAge)
         }
         // filter profession if required
-        if (userInput.getProfessionals != null){
+        if (userInput.getProfessionals != null) {
             userRDD = userRDD.filter(u => userInput.getProfessionals.contains(u.getString(4)))
         }
         // filter city if required
-        if (userInput.getCities != null){
+        if (userInput.getCities != null) {
             userRDD = userRDD.filter(u => userInput.getCities.contains(u.getString(5)))
 
         }
 
         // join and aggregate
-        val userRDD2  = userRDD.map(row => (row.getLong(0), row))
+        val userRDD2 = userRDD.map(row => (row.getLong(0), row))
         var rdd = sessionRDD.join(userRDD2).mapValues(Transformer.addUserInfoToRecord)
 
         // filter words if required
@@ -156,19 +188,10 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
 
     // 对通过筛选条件的session，按照各个品类的点击、下单和支付次数，降序排列，获取前10个热门品类
     def getTop10Category(sqlContext: SQLContext, userInput: UserInput) = {
-        var timeRec = System.currentTimeMillis
         val rdd1 = queryRDD(sqlContext, userInput)
-        println(s"Query Time : ${System.currentTimeMillis - timeRec} ms")
-
-        timeRec = System.currentTimeMillis
         val rdd2 = rdd1.flatMap(Transformer.sessionRecordToCateRec(_)).groupBy(_._1)
             .mapValues(_.reduce((p1, p2) => (p1._1, p1._2.add(p2._2)))._2)
-        println(s"Map Time : ${System.currentTimeMillis - timeRec} ms")
-
-        timeRec = System.currentTimeMillis
         val rdd3 = rdd2.map(_._2).top(10)
-        //val rdd3 = rdd2.map(_._2).sortBy(p => p, false)
-        println(s"Sort Time : ${System.currentTimeMillis - timeRec} ms")
 
         rdd3
     }

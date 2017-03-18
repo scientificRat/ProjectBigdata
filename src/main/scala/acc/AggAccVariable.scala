@@ -15,6 +15,8 @@ class AggAccVariable(timeRanges: Array[LongRange], pageRanges: Array[LongRange])
     // initialize
     for (range <- timeRanges) {
         timeBasedAcc.put(range, 0)
+    }
+    for (range <- pageRanges) {
         pageBasedAcc.put(range, 0)
     }
 
@@ -63,11 +65,11 @@ class AggAccVariable(timeRanges: Array[LongRange], pageRanges: Array[LongRange])
     override def toString: String = {
         var rst = "Base on time:\n"
         this.timeBasedAcc.foreach(tp => {
-            rst += s"${tp._1.getLow}s ~ ${tp._1.getHigh}s: ${tp._2}"
+            rst += s"${tp._1.getLow}s ~ ${tp._1.getHigh}s: ${tp._2} | "
         })
         rst += "\n Base on step\n"
         this.pageBasedAcc.foreach(tp => {
-            rst += s"${tp._1.getLow} ~ ${tp._1.getHigh}: ${tp._2}"
+            rst += s"${tp._1.getLow} ~ ${tp._1.getHigh}: ${tp._2} | "
         })
         rst
     }

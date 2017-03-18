@@ -21,7 +21,7 @@ public class TaskRecordDAO {
         PreparedStatement ppstmt = null;
 
         try{
-            ppstmt =  cnct.prepareStatement("INSERT INTO " + Constants.TABLE_TASK_RECORD_INFO + " VALUES(?, ?, ?, ?)");
+            ppstmt =  cnct.prepareStatement("INSERT INTO " + Constants.TABLE_TASK_RECORD_INFO + "(category, submitTime, finishTime, record)  VALUES(?, ?, ?, ?)");
             ppstmt.setInt(1, tr.getCategory());
             ppstmt.setTimestamp(2, tr.getSubmitTime());
             ppstmt.setTimestamp(3, tr.getFinishTime());

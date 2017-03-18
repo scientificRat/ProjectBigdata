@@ -1,6 +1,7 @@
 package domain;
 
 import java.io.Serializable;
+import java.sql.Timestamp;
 import java.util.Date;
 
 /**
@@ -18,8 +19,17 @@ public class UserInput implements Serializable {
     private String[] searchWords;
     private String[] cities;
     private long[] clickCategoryIDs;
+    private Timestamp submitTime;
 
     public UserInput() {
+    }
+
+    public Timestamp getSubmitTime() {
+        return submitTime;
+    }
+
+    public void setSubmitTime(Timestamp submitTime) {
+        this.submitTime = submitTime;
     }
 
     public String getTaskID() {
