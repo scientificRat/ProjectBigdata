@@ -28,7 +28,8 @@ object VisitCountAccumulator extends AccumulatorParam[String]{
     }
 
     override def zero(initialValue: String): String = {
-        result = "1~3=0|4~6=0|7~9=0|10~30=0|30~60=0|60 and more = 0"
+        result = null;
         return result
     }
+
 }

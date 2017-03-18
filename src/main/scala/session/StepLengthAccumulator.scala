@@ -22,7 +22,7 @@ object StepLengthAccumulator extends AccumulatorParam[String]{
     }
 
     override def zero(initialValue: String): String = {
-        result = "1~3=0|4~6=0|6 and more = 0"
+        result = null;
         return result
     }
 

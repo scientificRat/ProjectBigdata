@@ -60,13 +60,13 @@ object SparkUtils {
         //定义用户数据schema
         val userSchema = StructType(
             List(
-                StructField("user_id", LongType, nullable = true), //1
-                StructField("username", StringType, nullable = true), //13
-                StructField("name", StringType, nullable = true), //14
-                StructField("age", IntegerType, nullable = true), //15
-                StructField("professional", StringType, nullable = true), //16
-                StructField("city", StringType, nullable = true), //17
-                StructField("sex", StringType, nullable = true) //18
+                StructField("user_id", LongType, nullable = true), //1 - 0
+                StructField("username", StringType, nullable = true), //13 - 1
+                StructField("name", StringType, nullable = true), //14 - 2
+                StructField("age", IntegerType, nullable = true), //15 - 3
+                StructField("professional", StringType, nullable = true), //16 - 4
+                StructField("city", StringType, nullable = true), //17 - 5
+                StructField("sex", StringType, nullable = true) //18 - 6
             )
         )
         //从指定位置创建RDD
