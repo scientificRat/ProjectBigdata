@@ -2,6 +2,7 @@ package session
 
 import javautils.DBHelper
 
+import acc.AggregationStatistics
 import constants.Constants
 import dao.DAOFactory
 import domain.{SessionRecord, UserInput}
@@ -10,7 +11,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
 
 import scala.util.control.Breaks
-import scalautils.{AggregationStatistics, SparkUtils}
+import scalautils.SparkUtils
 
 /**
   * Created by sky on 2017/3/15.
@@ -64,8 +65,8 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
                         val userDF = sqlContext.table(s"${Constants.TABLE_USER_INFO}")
                         val rdd  = sessionDF.join(userDF, Seq("user_id")).rdd
 
-                        //println(AggregationStatistics.aggreStatics(
-                        //    rdd.groupBy(_.getString(2).hashCode).map(Transformer.rowsToSessionRecord), sparkContext))
+                        println(AggregationStatistics.aggregationStatics(
+                            rdd.groupBy(_.getString(2)).map(Transformer.rowsToSessionRecord)))
                     }
                     case "4" => {
                         // 对通过筛选条件的session，按照各个品类的点击、下单和支付次数，降序排列，获取前10个热门品类
@@ -84,23 +85,6 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
         dbConnection.close()
         DBHelper.closeConnection()
     }
-
-    // Query and aggregate session by time granularity
-    // old one, very slow
-//    def aggregateSessionByDate(sqlContext : SQLContext, beg : Long, end : Long): RDD[(String, SessionRecord)] = {
-//        var sessionDF = sqlContext.table(s"${Constants.TABLE_USER_VISIT_ACTION}")
-//        // filter by date limit
-//        sessionDF = sessionDF.filter(sessionDF("date").gt(beg) &&
-//            sessionDF("date").lt(end))
-//
-//        // join the session and user info
-//        val userDF = sqlContext.table(s"${Constants.TABLE_USER_INFO}")
-//        val rdd  = sessionDF.join(userDF, Seq("user_id")).rdd
-//
-//        // aggregate the sessionRecord
-//        rdd.map(r => (r.getString(2), r)).groupByKey().map(Transformer.rowsToSessionRecord)
-//    }
-
     def aggregateSessionByDate(sqlContext : SQLContext, beg : Long, end : Long): RDD[(String, SessionRecord)] = {
         // filter by date limit and aggregate
         val sessionDF = sqlContext.table(s"${Constants.TABLE_USER_VISIT_ACTION}")
@@ -115,40 +99,6 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
 
         rdd.map(kv => (kv._2.getSessionID, kv._2))
     }
-
-    // query RDD which reach the conditions : age|pro|city|words|click_category|(necessary)time
-    // old one, very slow
-//    def queryRDD(sqlContext: SQLContext, userInput: UserInput): RDD[(Int, SessionRecord)] = {
-//        // check
-//        assert(userInput.getStartDate != null, "error,parameter startDate is required")
-//        assert(userInput.getEndDate != null, "error,parameter ebdDate is required")
-//
-//        var rdd = aggregateSessionByDate(sqlContext, userInput.getStartDate.getTime, userInput.getEndDate.getTime)
-//
-//        // filter age if required
-//        if (userInput.getStartAge != null && userInput.getEndAge != null){
-//            rdd = rdd.filter(kv => {kv._2.getAge >= userInput.getStartAge &&
-//                kv._2.getAge <= userInput.getEndAge})
-//        }
-//        // filter profession if required
-//        if (userInput.getProfessionals != null){
-//            rdd = rdd.filter(kv => {userInput.getProfessionals.contains(kv._2.getProfessional)})
-//        }
-//        // filter city if required
-//        if (userInput.getCities != null){
-//            rdd = rdd.filter(kv => {userInput.getCities.contains(kv._2.getCityName)})
-//        }
-//        // filter words if required
-//        if (userInput.getSearchWords != null){
-//            rdd = rdd.filter(kv => {userInput.getSearchWords.exists(kv._2.getSearchWord.contains(_))})
-//        }
-//        // filter click category if required
-//        if (userInput.getClickCategoryIDs != null){
-//            rdd = rdd.filter(kv => {userInput.getClickCategoryIDs.exists( cate =>
-//                kv._2.getClickRecord.exists(_.id == cate))})
-//        }
-//        rdd
-//    }
 
     // query RDD which reach the conditions : age|pro|city|words|click_category|(necessary)time
     def queryRDD(sqlContext: SQLContext, userInput: UserInput): RDD[(String, SessionRecord)] = {
