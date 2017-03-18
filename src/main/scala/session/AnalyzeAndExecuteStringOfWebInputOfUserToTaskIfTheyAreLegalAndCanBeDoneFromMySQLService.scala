@@ -67,8 +67,7 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
                         val rdd  = sessionDF.join(userDF, Seq("user_id")).rdd
 
                         println(s"Cost : ${System.currentTimeMillis() - timeRec} ms")
-                        //println(AggregationStatistics.aggreStatics(
-                        //    rdd.groupBy(_.getString(2).hashCode).map(Transformer.rowsToSessionRecord), sparkContext))
+
                     }
                     case "4" => {
                         // 对通过筛选条件的session，按照各个品类的点击、下单和支付次数，降序排列，获取前10个热门品类

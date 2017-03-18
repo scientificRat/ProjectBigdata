@@ -57,7 +57,8 @@ class RealTimeADStatService(@transient sparkContext: SparkContext,
 
     /**
       * 线程主体
-      * 更新黑名单数据, 过滤黑名单, 实时计算每天各省各城市各广告的点击量, 实时各个广告最近1小时内各分钟的点击量, 统计top3
+      * 更新黑名单数据, 过滤黑名单, 实时计算每天各省各城市各广告的点击量,
+      * 实时各个广告最近1小时内各分钟的点击量, 统计top3
       */
     override def run(): Unit = {
         // 标准化输入数据

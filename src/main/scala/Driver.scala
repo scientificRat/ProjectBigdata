@@ -2,6 +2,7 @@ import constants.Constants
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.{SparkConf, SparkContext}
 import service.RealTimeADStatService
+import session.AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFromMySQLBySessionNotJustActionService
 
 /**
   * Created by sky on 2017/3/15.
@@ -22,8 +23,9 @@ object Driver {
         println("###--adStat----start--###")
 
         // 开启用户访问分析任务
-        val userVisitAnalyzeService = new UserVisitAnalyzeService(sparkContext, sqlContext)
-//        userVisitAnalyzeService.start()
+        val analyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFromMySQLBySessionNotJustActionService =
+            new AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFromMySQLBySessionNotJustActionService(sparkContext, sqlContext)
+        analyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFromMySQLBySessionNotJustActionService.start
         println("###--userVisitAnalyze-----start--###")
 
         // 等待线程结束
