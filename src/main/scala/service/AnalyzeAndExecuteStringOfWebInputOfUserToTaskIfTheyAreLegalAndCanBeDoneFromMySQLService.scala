@@ -1,16 +1,17 @@
-package session
+package service
 
 import javautils.DBHelper
 
 import constants.Constants
 import dao.DAOFactory
-import domain.{CountRecord, SessionRecord, UserInput}
+import domain.{SessionRecord, UserInput}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
+import session.Transformer
 
 import scala.util.control.Breaks
-import scalautils.{AggregationStatistics, SparkUtils}
+import scalautils.SparkUtils
 
 /**
   * Created by sky on 2017/3/15.

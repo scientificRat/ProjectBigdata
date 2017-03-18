@@ -1,8 +1,7 @@
 import constants.Constants
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.{SparkConf, SparkContext}
-import service.RealTimeADStatService
-import session.AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFromMySQLBySessionNotJustActionService
+import service.{AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFromMySQLBySessionNotJustActionService, RealTimeADStatService}
 
 /**
   * Created by sky on 2017/3/15.
