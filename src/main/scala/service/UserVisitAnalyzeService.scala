@@ -19,7 +19,7 @@ import scalautils.SparkUtils
 /**
   * Created by sky on 2017/3/15.
   */
-class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFromMySQLBySessionNotJustActionService
+class UserVisitAnalyzeService
 (sparkContext: SparkContext, sqlContext: SQLContext) extends Thread with Serializable {
     override def run(): Unit = {
         // 获得用户输入（输入中ID即为任务类型）
@@ -38,6 +38,7 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
 
                 // 开始处理
                 //val timeRec = System.currentTimeMillis()
+                // fixme: debug only
                 println(s"Task ${userInput.getTaskID} : ")
                 val timeRec = System.currentTimeMillis()
                 val taskRec = new TaskRecord
@@ -110,14 +111,10 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
                 }
 
                 DAOFactory.getTRDAO(dbConnection).insertTaskRecord(taskRec)
+                // fixme: debug only
                 println(s"Cost : ${System.currentTimeMillis() - timeRec} ms")
             }
         )
-
-        // 释放资源
-        sparkContext.stop()
-        dbConnection.close()
-        DBHelper.closeConnection()
     }
 
     def aggregateSessionByDate(sqlContext: SQLContext, beg: Long, end: Long): RDD[(String, SessionRecord)] = {

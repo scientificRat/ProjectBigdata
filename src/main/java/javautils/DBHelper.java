@@ -9,7 +9,7 @@ import com.mchange.v2.c3p0.*;
  */
 public class DBHelper {
     static{
-        System.setProperty("com.mchange.v2.c3p0.cfg.xml","./src/main/resource/c3p0-config.xml");
+        System.setProperty("com.mchange.v2.c3p0.cfg.xml","./src/main/resources/c3p0-config.xml");
     }
     static private ComboPooledDataSource DataSource = new ComboPooledDataSource("stupidRatProj");
 
