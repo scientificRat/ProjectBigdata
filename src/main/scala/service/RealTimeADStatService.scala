@@ -32,12 +32,12 @@ object RealTimeADStatService extends Serializable {
 
 /**
   *
-  * @param sparkContext sparkContext
-  * @param zkQuorum     Zookeeper quorum (hostname:port,hostname:port,..)
-  * @param groupID      The group id for this consumer
-  * @param topics       Map of (topic_name -> numPartitions) to consume. Each partition is consumed
-  *                     in its own thread
-  * @param bachDuration The bach duration time
+  * @param sparkContext      sparkContext
+  * @param zkQuorum          Zookeeper quorum (hostname:port,hostname:port,..)
+  * @param groupID           The group id for this consumer
+  * @param topics            Map of (topic_name -> numPartitions) to consume. Each partition is consumed
+  *                          in its own thread
+  * @param bachDuration      The bach duration time
   * @param checkPointAddress The checkPoint address, it's usually a directory of hadoop HDFS
   */
 class RealTimeADStatService(@transient sparkContext: SparkContext,
@@ -115,6 +115,7 @@ class RealTimeADStatService(@transient sparkContext: SparkContext,
       *
       * @param dStream 数据
       */
+    @deprecated
     private def updateBlackList(dStream: DStream[RawRealTimeAd]): Unit = {
         dStream.map(ad => ((ad.getDateOfDayStr, ad.getUserID, ad.getAdvertisementID), 1L))
             .reduceByKey(_ + _).foreachRDD(rdd => {
@@ -160,6 +161,7 @@ class RealTimeADStatService(@transient sparkContext: SparkContext,
       * @param dStream 数据
       * @return
       */
+    @deprecated
     private def getFilteredStream(dStream: DStream[RawRealTimeAd]): DStream[RawRealTimeAd] = {
         dStream.map(raw => (raw.getUserID, raw)).transform(rdd => {
             // read backList from  mysql database
