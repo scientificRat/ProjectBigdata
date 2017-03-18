@@ -2,6 +2,7 @@ package service
 
 import javautils.DBHelper
 
+import acc.AggregationStatistics
 import constants.Constants
 import dao.DAOFactory
 import domain.{SessionRecord, UserInput}
@@ -17,8 +18,8 @@ import scalautils.SparkUtils
   * Created by sky on 2017/3/15.
   */
 class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFromMySQLBySessionNotJustActionService
-(sparkContext: SparkContext, sqlContext: SQLContext) extends Thread with Serializable{
-    override def run(): Unit ={
+(sparkContext: SparkContext, sqlContext: SQLContext) extends Thread with Serializable {
+    override def run(): Unit = {
         // 获得用户输入（输入中ID即为任务类型）
         val dbConnection = DBHelper.getDBConnection
 
@@ -27,9 +28,9 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
 
         val loop = new Breaks
         loop.breakable(
-            while(true){
+            while (true) {
                 val userInput = DAOFactory.getUIDAO(dbConnection).getUserInput
-                if (userInput == null){
+                if (userInput == null) {
                     loop.break
                 }
 
@@ -65,10 +66,9 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
                         val sessionDF = sqlContext.table(s"${Constants.TABLE_USER_VISIT_ACTION}")
                         // join the session and user info
                         val userDF = sqlContext.table(s"${Constants.TABLE_USER_INFO}")
-                        val rdd  = sessionDF.join(userDF, Seq("user_id")).rdd
-
                         println(s"Cost : ${System.currentTimeMillis() - timeRec} ms")
-
+                        val rdd = sessionDF.join(userDF, Seq("user_id")).rdd
+                        println(AggregationStatistics.aggregationStatics(sparkContext,rdd.groupBy(_.getString(2)).map(Transformer.rowsToSessionRecord)))
                     }
                     case "4" => {
                         // 对通过筛选条件的session，按照各个品类的点击、下单和支付次数，降序排列，获取前10个热门品类
@@ -97,7 +97,7 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
 
         // join the session and user info
         val userDF = sqlContext.table(s"${Constants.TABLE_USER_INFO}")
-        val userRDD  = userDF.rdd.map(row => (row.getLong(0), row))
+        val userRDD = userDF.rdd.map(row => (row.getLong(0), row))
         val rdd = sessionRDD.join(userRDD).mapValues(Transformer.addUserInfoToRecord)
 
         rdd.map(kv => (kv._2.getSessionID, kv._2))
@@ -131,6 +131,7 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
         // filter city if required
         if (userInput.getCities != null){
             userRDD = userRDD.filter(u => userInput.getCities.contains(u.getString(5)))
+
         }
 
         // join and aggregate
@@ -138,13 +139,17 @@ class AnalyzeAndExecuteStringOfWebInputOfUserToTaskIfTheyAreLegalAndCanBeDoneFro
         var rdd = sessionRDD.join(userRDD2).mapValues(Transformer.addUserInfoToRecord)
 
         // filter words if required
-        if (userInput.getSearchWords != null){
-            rdd = rdd.filter(kv => {userInput.getSearchWords.exists(kv._2.getSearchWord.contains(_))})
+        if (userInput.getSearchWords != null) {
+            rdd = rdd.filter(kv => {
+                userInput.getSearchWords.exists(kv._2.getSearchWord.contains(_))
+            })
         }
         // filter click category if required
-        if (userInput.getClickCategoryIDs != null){
-            rdd = rdd.filter(kv => {userInput.getClickCategoryIDs.exists( cate =>
-                kv._2.getClickRecord.exists(_.id == cate))})
+        if (userInput.getClickCategoryIDs != null) {
+            rdd = rdd.filter(kv => {
+                userInput.getClickCategoryIDs.exists(cate =>
+                    kv._2.getClickRecord.exists(_.id == cate))
+            })
         }
         rdd.map(kv => (kv._2.getSessionID, kv._2))
     }
