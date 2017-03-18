@@ -21,23 +21,28 @@ public class UserInputDAO {
 
     public UserInput getUserInput() throws SQLException{
         UserInput ui = null;
-        PreparedStatement ppstmt = null;
+        PreparedStatement ppstmt1 = null, ppstmt2 = null;
 
         try{
-            ppstmt = cnct.prepareStatement("SELECT * FROM " + Constants.TABLE_TASK_INFO + " ORDER BY ID LIMIT 1");
-            ResultSet rs = ppstmt.executeQuery();
+            ppstmt1 = cnct.prepareStatement("SELECT * FROM " + Constants.TABLE_TASK_INFO + " ORDER BY ID LIMIT 1");
+            ppstmt2 = cnct.prepareStatement("DELETE FROM " + Constants.TABLE_TASK_INFO + " ORDER BY ID LIMIT 1");
+            ResultSet rs = ppstmt1.executeQuery();
 
             if (rs.next()){
                 Gson gson = new Gson();
                 ui = gson.fromJson(rs.getString("JSON"), UserInput.class);
             }
+            ppstmt2.executeUpdate();
         }
         catch (SQLException sqlerr){
             throw sqlerr;
         }
         finally {
-            if (ppstmt != null){
-                ppstmt.close();
+            if (ppstmt1 != null){
+                ppstmt1.close();
+            }
+            if (ppstmt2 != null){
+                ppstmt1.close();
             }
         }
 

@@ -17,7 +17,7 @@ public class UserInput implements Serializable {
     private String[] professionals;
     private String[] searchWords;
     private String[] cities;
-    private String[] clickCategoryIDs;
+    private long[] clickCategoryIDs;
 
     public UserInput() {
     }
@@ -94,11 +94,11 @@ public class UserInput implements Serializable {
         this.cities = cities;
     }
 
-    public String[] getClickCategoryIDs() {
+    public long[] getClickCategoryIDs() {
         return clickCategoryIDs;
     }
 
-    public void setClickCategoryIDs(String[] clickCategoryIDs) {
+    public void setClickCategoryIDs(long[] clickCategoryIDs) {
         this.clickCategoryIDs = clickCategoryIDs;
     }
 }

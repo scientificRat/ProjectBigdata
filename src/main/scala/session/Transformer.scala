@@ -1,8 +1,9 @@
 package session
 
-import domain.SessionRecord
+import domain.{CountRecord, SessionRecord}
 import org.apache.spark.sql.Row
 
+import scala.collection.immutable.HashMap
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -61,5 +62,22 @@ object Transformer extends Serializable{
         record.setPayRecord(pay.toArray)
 
         (kv._1, record)
+    }
+
+    def sessionRecordToCateRec(kv : (String, SessionRecord)) : Iterable[(Long, CountRecord)] = {
+        var countMap = new HashMap[Long, CountRecord]
+        def count(product : SessionRecord.Product) : Unit = {
+            if (!countMap.contains(product.category)){
+                countMap += ((product.category, new CountRecord(0, 0, 0, product.category)))
+            }
+            countMap(product.category).addClickTime()
+        }
+
+        // count times
+        kv._2.getClickRecord.foreach(count)
+        kv._2.getOrderRecord.foreach(count)
+        kv._2.getPayRecord.foreach(count)
+
+        countMap
     }
 }

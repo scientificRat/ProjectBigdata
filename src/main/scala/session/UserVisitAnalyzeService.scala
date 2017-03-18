@@ -5,7 +5,7 @@ import javautils.DBHelper
 
 import com.google.gson.Gson
 import constants.Constants
-import domain.{ProductStat, UserInput}
+import domain.{CountRecord, UserInput}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SQLContext}
 import org.apache.spark.{SparkConf, SparkContext}
@@ -100,10 +100,6 @@ object UserVisitAnalyzeService {
 
             }
             case "4" => {
-                // 对通过筛选条件的session，按照各个品类的点击、下单和支付次数，降序排列，获取前10个热门品类
-                val rdd = getTop10Category(sqlContext, userInput)
-                // 输出
-                rdd.foreach(println)
             }
         }
 
@@ -148,60 +144,9 @@ object UserVisitAnalyzeService {
         sqlContext.sql(sql).rdd
     }
 
-    // 对通过筛选条件的session，按照各个品类的点击、下单和支付次数，降序排列，获取前10个热门品类
-    def getTop10Category(sqlContext: SQLContext, userInput: UserInput) = {
-        // 检查输入合法性
-        assert(userInput.getStartDate != null, "error,parameter startDate is required")
-        assert(userInput.getEndDate != null, "error,parameter ebdDate is required")
-        val limit = constructSqlLimitHelp(userInput)
-        val sql = s"select click_product_id,order_product_ids,pay_product_ids " +
-            s"from ${Constants.TABLE_USER_VISIT_ACTION} as t1, ${Constants.TABLE_USER_INFO} as t2 " +
-            s"WHERE t1.user_id = t2.user_id " +
-            s"AND date >= '${userInput.getStartDate.getTime}' AND date<= '${userInput.getEndDate.getTime}' " + limit
-
-        sqlContext.sql(sql).rdd.map(row => {
-            if (!row.isNullAt(0)) {
-                (row.getLong(0), new ProductStat(1, 0, 0))
-            } else if (!row.isNullAt(1)) {
-                (row.getLong(1), new ProductStat(0, 1, 0))
-            } else if (!row.isNullAt(2)) {
-                (row.getLong(2), new ProductStat(0, 0, 1))
-            } else {
-                (-1, new ProductStat(0, 0, 0))
-            }
-        }).filter(_._1 != -1).reduceByKey((a, b) => {
-            a.add(b)
-        }).sortBy(tp => tp._2, ascending = false)
-    }
-
 
     private def constructSqlLimitHelp(userInput: UserInput): String = {
-
-        val professionals = userInput.getProfessionals
-        val cities = userInput.getCities
-        val searchKeyWords = userInput.getSearchWords
-        val clickCategoryIDs = userInput.getClickCategoryIDs
-
-        var limit = ""
-
-        def constructLimitsHelp(colName: String, arr: Array[String]): Unit = {
-            if (arr != null && arr.nonEmpty) {
-                limit += s" AND $colName in("
-                arr.foreach(limit += "'" + _ + "',")
-                limit = limit.substring(0, limit.length - 1)
-                limit += ") "
-            }
-        }
-
-        constructLimitsHelp("professional", professionals)
-        constructLimitsHelp("city", cities)
-        constructLimitsHelp("search_keyword", searchKeyWords)
-        constructLimitsHelp("click_category_id", clickCategoryIDs)
-
-        if (userInput.getStartAge != null && userInput.getEndAge != null) {
-            limit += s"AND age>'${userInput.getStartAge}' and age<'${userInput.getEndAge}'"
-        }
-        limit
+        null
     }
 
 

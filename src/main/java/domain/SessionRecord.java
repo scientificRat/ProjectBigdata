@@ -8,6 +8,11 @@ import java.sql.Date;
  * Created by sky on 2017/3/15.
  */
 public class SessionRecord implements Serializable {
+    public static String toStringOutPut(SessionRecord sessionRecord){
+        return "sessionid="+sessionRecord.getSessionID()+"|searchword="+sessionRecord.getSearchWord()+"|clickcategrory="+sessionRecord.getClickRecord()+"|age="+sessionRecord.age+"|professional="+sessionRecord.getProfessional()+
+                "|city="+sessionRecord.getCityName()+"|sex="+sessionRecord.getSex();
+    }
+
     static public class Product implements Serializable{
         public long id;
         public long category;

@@ -6,7 +6,7 @@ package constants;
 public interface Constants {
     String SPARK_APP_NAME = "Statistic";
 
-    String LOCAL_SESSION_DATA_PATH = "localData/click_shrink.log";
+    String LOCAL_SESSION_DATA_PATH = "localData/click.log";
     String LOCAL_USER_DATA_PATH = "localData/user.txt";
     String LOCAL_PRODUCT_DATA_PATH = "localData/product.txt";
 

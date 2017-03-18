@@ -5,20 +5,24 @@ import java.io.Serializable;
 /**
  * Created by sky on 2017/3/11.
  */
-public class ProductStat implements Comparable<ProductStat>, Serializable {
-
+public class CountRecord implements Comparable<CountRecord>, Serializable {
     private long clickTime = 0;
     private long orderTime = 0;
     private long payTime = 0;
+    private long categoryID = 0;
 
-
-    public ProductStat(long clickTime, long orderTime, long payTime) {
+    public CountRecord(long clickTime, long orderTime, long payTime, long categoryID) {
         this.clickTime = clickTime;
         this.orderTime = orderTime;
         this.payTime = payTime;
+        this.categoryID = categoryID;
     }
 
-    public ProductStat() {
+    public CountRecord() {
+    }
+
+    public long getCategoryID() {
+        return categoryID;
     }
 
     public long getClickTime() {
@@ -33,22 +37,34 @@ public class ProductStat implements Comparable<ProductStat>, Serializable {
         return payTime;
     }
 
-    public ProductStat addClickTime() {
+    public void setClickTime(long clickTime) {
+        this.clickTime = clickTime;
+    }
+
+    public void setOrderTime(long orderTime) {
+        this.orderTime = orderTime;
+    }
+
+    public void setPayTime(long payTime) {
+        this.payTime = payTime;
+    }
+
+    public CountRecord addClickTime() {
         clickTime++;
         return this;
     }
 
-    public ProductStat addOrderTime() {
+    public CountRecord addOrderTime() {
         orderTime++;
         return this;
     }
 
-    public ProductStat addPayTime() {
+    public CountRecord addPayTime() {
         payTime++;
         return this;
     }
 
-    public ProductStat add(ProductStat o) {
+    public CountRecord add(CountRecord o) {
         this.clickTime += o.clickTime;
         this.orderTime += o.orderTime;
         this.payTime += o.payTime;
@@ -57,7 +73,7 @@ public class ProductStat implements Comparable<ProductStat>, Serializable {
 
 
     @Override
-    public int compareTo(ProductStat o) {
+    public int compareTo(CountRecord o) {
         if (clickTime == o.clickTime) {
             if (orderTime == o.orderTime) {
                 return (int) (payTime - o.payTime);
@@ -69,6 +85,6 @@ public class ProductStat implements Comparable<ProductStat>, Serializable {
 
     @Override
     public String toString() {
-        return clickTime + " | " + orderTime + " | " + payTime;
+        return categoryID + " : " +  clickTime + " | " + orderTime + " | " + payTime;
     }
 }
