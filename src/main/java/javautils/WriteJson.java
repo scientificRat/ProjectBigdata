@@ -24,11 +24,13 @@ public class WriteJson {
         String password = "123456";
         String sql;
         String driver = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
-       try {
+        Connection conn = null;
+
+        try {
            Date date = new Date();
            Timestamp nousedate = new Timestamp(date.getTime());
             Class.forName("com.mysql.jdbc.Driver");
-            Connection conn = DriverManager.getConnection(url,user,password);
+            conn = DriverManager.getConnection(url,user,password);
             Statement statement = conn.createStatement();
             sql = "INSERT INTO idcproj (JSON,submit_time) VALUES('"+inputJson01+"','"+nousedate+"')";
             int rs1 = statement.executeUpdate(sql);
@@ -42,6 +44,7 @@ public class WriteJson {
             int rs5 = statement.executeUpdate(sql);
             sql = "INSERT INTO idcproj (JSON,submit_time) VALUES('"+inputJson044+"','"+nousedate+"')";
             int rs6 = statement.executeUpdate(sql);
+
             conn.close();
         }catch (Exception   e){
             e.printStackTrace();

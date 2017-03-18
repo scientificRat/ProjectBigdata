@@ -20,5 +20,6 @@ public class DBHelper {
 
     public static void closeConnection() throws SQLException{
         DataSource.close();
+        DataSources.destroy(DataSource);
     }
 }

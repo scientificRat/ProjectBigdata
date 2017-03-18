@@ -68,6 +68,19 @@ public class CountRecord implements Comparable<CountRecord>, Serializable {
         return this;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof CountRecord){
+            CountRecord cr = (CountRecord)obj;
+            if (cr.clickTime == clickTime &&
+                    cr.categoryID == categoryID &&
+                    cr.orderTime == orderTime &&
+                    cr.payTime == payTime){
+                return true;
+            }
+        }
+        return false;
+    }
 
     @Override
     public int compareTo(CountRecord o) {
