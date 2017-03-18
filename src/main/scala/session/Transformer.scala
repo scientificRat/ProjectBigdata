@@ -10,7 +10,7 @@ import scala.collection.mutable.ArrayBuffer
   * Created by sky on 2017/3/17.
   */
 object Transformer extends Serializable{
-    def rowsToSessionRecord(kv : (String, Iterable[Row])) : (String, SessionRecord) = {
+    def rowsToSessionRecord(kv : (Int, Iterable[Row])) : (Int, SessionRecord) = {
         val record = new SessionRecord()
         val list = kv._2.toList
 
@@ -64,19 +64,19 @@ object Transformer extends Serializable{
         (kv._1, record)
     }
 
-    def sessionRecordToCateRec(kv : (String, SessionRecord)) : Iterable[(Long, CountRecord)] = {
+    def sessionRecordToCateRec(kv : (Int, SessionRecord)) : Iterable[(Long, CountRecord)] = {
         var countMap = new HashMap[Long, CountRecord]
-        def count(product : SessionRecord.Product) : Unit = {
+        def count(order : Int, product : SessionRecord.Product) : Unit = {
             if (!countMap.contains(product.category)){
                 countMap += ((product.category, new CountRecord(0, 0, 0, product.category)))
             }
-            countMap(product.category).addClickTime()
+            countMap(product.category).addTime(order)
         }
 
         // count times
-        kv._2.getClickRecord.foreach(count)
-        kv._2.getOrderRecord.foreach(count)
-        kv._2.getPayRecord.foreach(count)
+        kv._2.getClickRecord.foreach(count(1, _))
+        kv._2.getOrderRecord.foreach(count(2, _))
+        kv._2.getPayRecord.foreach(count(3, _))
 
         countMap
     }

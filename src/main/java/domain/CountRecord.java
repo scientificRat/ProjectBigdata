@@ -37,16 +37,13 @@ public class CountRecord implements Comparable<CountRecord>, Serializable {
         return payTime;
     }
 
-    public void setClickTime(long clickTime) {
-        this.clickTime = clickTime;
-    }
-
-    public void setOrderTime(long orderTime) {
-        this.orderTime = orderTime;
-    }
-
-    public void setPayTime(long payTime) {
-        this.payTime = payTime;
+    public CountRecord addTime(int order){
+        switch (order){
+            case 1:addClickTime();break;
+            case 2:addOrderTime();break;
+            case 3:addPayTime();break;
+        }
+        return this;
     }
 
     public CountRecord addClickTime() {

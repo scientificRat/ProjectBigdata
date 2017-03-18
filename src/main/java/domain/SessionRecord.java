@@ -9,7 +9,14 @@ import java.sql.Date;
  */
 public class SessionRecord implements Serializable {
     public static String toStringOutPut(SessionRecord sessionRecord){
-        return "sessionid="+sessionRecord.getSessionID()+"|searchword="+sessionRecord.getSearchWord()+"|clickcategrory="+sessionRecord.getClickRecord()+"|age="+sessionRecord.age+"|professional="+sessionRecord.getProfessional()+
+        String searchwordlist = "";
+        String[] tmparrsw = sessionRecord.getSearchWord();
+        for(int i = 0;i<tmparrsw.length;i++){
+            searchwordlist += tmparrsw[i]+",";
+        }
+        return "sessionid="+sessionRecord.getSessionID()+"|searchword="+searchwordlist+"|clickcategrory="+
+                sessionRecord.getClickRecord().toString()+"|age="+sessionRecord.age+"|professional="+
+                sessionRecord.getProfessional()+
                 "|city="+sessionRecord.getCityName()+"|sex="+sessionRecord.getSex();
     }
 
