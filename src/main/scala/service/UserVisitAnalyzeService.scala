@@ -7,20 +7,23 @@ import javautils.DBHelper
 import acc.AggregationStatistics
 import constants.Constants
 import dao.{DAOFactory, TaskRecordDAO}
-import domain.{SessionRecord, TaskRecord, UserInput}
+import domain.{CountRecord, SessionRecord, TaskRecord, UserInput}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
-import session.Transformer
 
 import scala.util.control.Breaks
-import scalautils.SparkUtils
+import scalautils.{SparkUtils, Transformer}
 
 /**
   * Created by sky on 2017/3/15.
   */
 class UserVisitAnalyzeService
 (sparkContext: SparkContext, sqlContext: SQLContext) extends Thread with Serializable {
+
+    /**
+      * The main body of the thread
+      */
     override def run(): Unit = {
         // 获得用户输入（输入中ID即为任务类型）
         val dbConnection = DBHelper.getDBConnection
@@ -42,7 +45,6 @@ class UserVisitAnalyzeService
                 println(s"Task ${userInput.getTaskID} : ")
                 val timeRec = System.currentTimeMillis()
                 val taskRec = new TaskRecord
-
                 userInput.getTaskID match {
                     case "1" => {
                         // 在指定日期范围内，按照session粒度进行数据聚合
@@ -50,7 +52,8 @@ class UserVisitAnalyzeService
                         assert(userInput.getStartDate != null, "error,parameter startDate is required")
                         assert(userInput.getEndDate != null, "error,parameter endDate is required")
 
-                        val rdd = aggregateSessionByDate(sqlContext, userInput.getStartDate.getTime, userInput.getEndDate.getTime)
+                        val rdd = aggregateSessionByDate(sqlContext,
+                            userInput.getStartDate.getTime, userInput.getEndDate.getTime)
                         // 输出
                         val res = rdd.collect()
                         taskRec.setCategory(userInput.getTaskID.toInt)
@@ -64,8 +67,8 @@ class UserVisitAnalyzeService
                     }
                     case "2" => {
                         // 根据用户的查询条件 返回的结果RDD,
-                        // 一个或者多个：年龄范围，职业（多选），城市（多选），搜索词（多选），点击品类（多选）进行数据过滤,session时间范围是必选的
-
+                        // 一个或者多个：
+                        // 年龄范围，职业（多选），城市（多选），搜索词（多选），点击品类（多选）进行数据过滤,session时间范围是必选的
                         val rdd = queryRDD(sqlContext, userInput)
                         // 输出
                         taskRec.setCategory(userInput.getTaskID.toInt)
@@ -117,10 +120,18 @@ class UserVisitAnalyzeService
         )
     }
 
-    def aggregateSessionByDate(sqlContext: SQLContext, beg: Long, end: Long): RDD[(String, SessionRecord)] = {
+    /**
+      * do aggregating by date range
+      *
+      * @param sqlContext sqlContext of spark
+      * @param begin      begin date in UTC
+      * @param end        end date in UTC
+      * @return aggregated RDD in type of RDD[(String, SessionRecord)]
+      */
+    private def aggregateSessionByDate(sqlContext: SQLContext, begin: Long, end: Long): RDD[(String, SessionRecord)] = {
         // filter by date limit and aggregate
         val sessionDF = sqlContext.table(s"${Constants.TABLE_USER_VISIT_ACTION}")
-        val sessionRDD = sessionDF.rdd.filter(row => row.getLong(0) > beg &&
+        val sessionRDD = sessionDF.rdd.filter(row => row.getLong(0) > begin &&
             row.getLong(0) < end).map(row => (row.getString(2), row))
             .groupByKey.mapValues(Transformer.sessionRowsToRecord).map(kv => (kv._2.getUserID, kv._2))
 
@@ -132,8 +143,14 @@ class UserVisitAnalyzeService
         rdd.map(kv => (kv._2.getSessionID, kv._2))
     }
 
-    // query RDD which reach the conditions : age|pro|city|words|click_category|(necessary)time
-    def queryRDD(sqlContext: SQLContext, userInput: UserInput): RDD[(String, SessionRecord)] = {
+    /**
+      * query RDD which reach the conditions : age|pro|city|words|click_category|(necessary)time
+      *
+      * @param sqlContext sqlContext of spark
+      * @param userInput  userInput object generated from json
+      * @return
+      */
+    private def queryRDD(sqlContext: SQLContext, userInput: UserInput): RDD[(String, SessionRecord)] = {
         // check
         assert(userInput.getStartDate != null, "error,parameter startDate is required")
         assert(userInput.getEndDate != null, "error,parameter ebdDate is required")
@@ -183,10 +200,15 @@ class UserVisitAnalyzeService
         rdd.map(kv => (kv._2.getSessionID, kv._2))
     }
 
-    // 对通过筛选条件的session，按照各个品类的点击、下单和支付次数，降序排列，获取前10个热门品类
-    def getTop10Category(sqlContext: SQLContext, userInput: UserInput) = {
+    /**
+      * 对通过筛选条件的session，按照各个品类的点击、下单和支付次数，降序排列，获取前10个热门品类
+      *
+      * @param sqlContext sqlContext of spark
+      * @param userInput  userInput object
+      */
+    private def getTop10Category(sqlContext: SQLContext, userInput: UserInput): Array[CountRecord] = {
         val rdd1 = queryRDD(sqlContext, userInput)
-        val rdd2 = rdd1.flatMap(Transformer.sessionRecordToCateRec(_)).groupBy(_._1)
+        val rdd2 = rdd1.flatMap(Transformer.sessionRecordToCateRec).groupBy(_._1)
             .mapValues(_.reduce((p1, p2) => (p1._1, p1._2.add(p2._2)))._2)
         val rdd3 = rdd2.map(_._2).top(10)
 

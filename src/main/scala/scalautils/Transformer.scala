@@ -1,4 +1,4 @@
-package session
+package scalautils
 
 import domain.{CountRecord, SessionRecord}
 import org.apache.spark.sql.Row

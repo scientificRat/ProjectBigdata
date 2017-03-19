@@ -43,6 +43,6 @@
         <!-- Driver类 -->
         <property name = "driverClass">com.mysql.jdbc.Driver</property>
         <!-- JDBC URL -->
-        <property name = "jdbcUrl">jdbc:mysql://192.168.2.42:3306/stupidRat</property>
+        <property name = "jdbcUrl">jdbc:mysql://192.168.2.13:3306/stupidRat</property>
     </named-config>
 </c3p0-config>
