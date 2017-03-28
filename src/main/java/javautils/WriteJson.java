@@ -19,9 +19,9 @@ public class WriteJson {
     static String inputJson044 = "{\"taskID\":\"4\",\"startDate\":\"2017-01-06\",\"endDate\":\"2017-04-06\",\"startAge\":16,\"endAge\":40}";
 
     public static void main(String args[]){
-        String url = "jdbc:mysql://192.168.2.42:3306/stupidrat";
+        String url = "jdbc:mysql://localhost:3306/stupidrat";
         String user = "root";
-        String password = "123456";
+        String password = "199606128";
         String sql;
         String driver = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
         Connection conn = null;

@@ -23,7 +23,11 @@ public class PerMinuteADVisitRepository extends Repository {
         preparedStatement.setString(2, advertisementID);
         preparedStatement.setLong(3, visitTime);
         preparedStatement.setLong(4, visitTime);
-        preparedStatement.execute();
+        try {
+            preparedStatement.execute();
+        } catch (SQLException e) {
+            // eat up
+        }
         preparedStatement.close();
     }
 }

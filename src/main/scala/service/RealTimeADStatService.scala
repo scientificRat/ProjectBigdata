@@ -22,11 +22,11 @@ import org.apache.spark.streaming.kafka.KafkaUtils
   * 为提高模块内聚性没有写到全局的常量区
   */
 object RealTimeADStatService extends Serializable {
-    val DEFAULT_ZK_QUORUM = "192.168.242.201:2181,192.168.242.202:2181,192.168.242.203:2181"
+    val DEFAULT_ZK_QUORUM = "localhost:2181"
     val DEFAULT_CONSUMER_GROUP_ID = "testGroup"
     val DEFAULT_PER_TOPIC_PARTITIONS = Map("AdRealTimeLog" -> 1)
     val DEFAULT_BATCH_DURATION = Seconds(5)
-    val DEFAULT_CHECKPOINT_ADDRESS = "hdfs://192.168.242.201:9000/sparkstream"
+    val DEFAULT_CHECKPOINT_ADDRESS = "/Users/huangzhengyue/Desktop/data"
 }
 
 
@@ -57,8 +57,11 @@ class RealTimeADStatService(@transient sparkContext: SparkContext,
 
     /**
       * 线程主体
-      * 更新黑名单数据, 过滤黑名单, 实时计算每天各省各城市各广告的点击量,
-      * 实时各个广告最近1小时内各分钟的点击量, 统计top3
+      * 1.更新黑名单数据
+      * 2.过滤黑名单
+      * 3.实时计算每天各省各城市各广告的点击量,
+      * 4.实时各个广告最近1小时内各分钟的点击量
+      * 5.统计top3
       */
     override def run(): Unit = {
         // 标准化输入数据
@@ -71,7 +74,7 @@ class RealTimeADStatService(@transient sparkContext: SparkContext,
         filteredStream.cache()
         // 实时计算每天各省各城市各广告的点击量((dateOfDay,province,city,advertisementID),visitTime) 并更新到mysql
         doADStatOfEveryDayEveryProvinceEveryCity(filteredStream)
-        // 实时各个广告最近1小时内各分钟的点击量 并写入mysql
+        // 实时计算各个广告最近1小时内各分钟的点击量 并写入mysql
         doADStatOfRecentHour(filteredStream)
         // 统计top3
         startTop3Stat()

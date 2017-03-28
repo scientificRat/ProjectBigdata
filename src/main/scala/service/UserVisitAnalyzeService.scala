@@ -40,8 +40,7 @@ class UserVisitAnalyzeService
                 }
 
                 // 开始处理
-                //val timeRec = System.currentTimeMillis()
-                // fixme: debug only
+                // fixme: delete after release
                 println(s"Task ${userInput.getTaskID} : ")
                 val timeRec = System.currentTimeMillis()
                 val taskRec = new TaskRecord
